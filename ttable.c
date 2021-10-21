@@ -66,11 +66,12 @@ static int addRecord(
     int32_t   rgb_index,
     int       tex_index,
     int       shade_rate,
+    int       draw_rate,
     int32_t   rgb_tint,
     int     * pError);
 
 static int readchar(FILE *pf, int *pChar);
-static int isblank(char *pstr);
+static int is_blank(char *pstr);
 static char *skipSpace(char *pstr, int optional);
 static char *readRGB(char *pstr, int32_t *pRGB);
 static char *readInt(char *pstr, int *pv);
@@ -134,6 +135,9 @@ static void shiftRecs(int start) {
  * shade_rate is the shading rate.  A fault occurs if it is not in the
  * range [0, 255].
  * 
+ * draw_rate is the drawing rate.  A fault occurs if it is not in the
+ * range [0, 255].
+ * 
  * rgb_tint is the RGB tint.  A fault occurs if out of range.
  * 
  * pError points to the variable to receive the error code in case of
@@ -147,6 +151,8 @@ static void shiftRecs(int start) {
  * 
  *   shade_rate - the shading rate
  * 
+ *   draw_rate - the drawing rate
+ * 
  *   rgb_tint - the RGB tint
  * 
  *   pError - pointer to the error code variable
@@ -159,6 +165,7 @@ static int addRecord(
     int32_t   rgb_index,
     int       tex_index,
     int       shade_rate,
+    int       draw_rate,
     int32_t   rgb_tint,
     int     * pError) {
   
@@ -176,6 +183,9 @@ static int addRecord(
     abort();
   }
   if ((shade_rate < 0) || (shade_rate > 255)) {
+    abort();
+  }
+  if ((draw_rate < 0) || (draw_rate > 255)) {
     abort();
   }
   if ((rgb_tint < -1) || (rgb_tint > INT32_C(0xffffff))) {
@@ -281,6 +291,7 @@ static int addRecord(
     psr->rgbidx = rgb_index;
     psr->tidx = tex_index;
     psr->srate = shade_rate;
+    psr->drate = draw_rate;
     if (rgb_tint >= 0) {
       psr->rgbtint = rgb_tint;
     } else {
@@ -362,7 +373,7 @@ static int readchar(FILE *pf, int *pChar) {
  * 
  *   non-zero if blank, zero if not
  */
-static int isblank(char *pstr) {
+static int is_blank(char *pstr) {
   
   int result = 0;
   
@@ -622,6 +633,7 @@ static int parseLine(char *pstr, int *pError) {
   int32_t rgb_index = 0;
   int tex_index = 0;
   int shade_rate = 0;
+  int draw_rate = 0;
   int32_t rgb_tint = 0;
   
   /* Check parameters */
@@ -639,7 +651,7 @@ static int parseLine(char *pstr, int *pError) {
   }
   
   /* Only proceed if line is not blank, else ignore */
-  if (!isblank(pstr)) {
+  if (!is_blank(pstr)) {
     
     /* Skip optional whitespace */
     pstr = skipSpace(pstr, 1);
@@ -688,9 +700,27 @@ static int parseLine(char *pstr, int *pError) {
       }
     }
     
+    /* Required whitespace */
+    if (status) {
+      pstr = skipSpace(pstr, 0);
+      if (pstr == NULL) {
+        *pError = TTABLE_ERR_SP;
+        status = 0;
+      }
+    }
+    
+    /* Read drawing rate */
+    if (status) {
+      pstr = readInt(pstr, &draw_rate);
+      if (pstr == NULL) {
+        *pError = TTABLE_ERR_INT;
+        status = 0;
+      }
+    }
+    
     /* Only proceed for RGB tint if present */
     if (status) {
-      if (!isblank(pstr)) {
+      if (!is_blank(pstr)) {
     
         /* Required whitespace */
         if (status) {
@@ -746,10 +776,19 @@ static int parseLine(char *pstr, int *pError) {
       }
     }
     
+    /* Range-check drawing rate */
+    if (status) {
+      if ((draw_rate < 0) || (draw_rate > 255)) {
+        *pError = TTABLE_ERR_DRAW;
+        status = 0;
+      }
+    }
+    
     /* Add record */
     if (status) {
       if (!addRecord(
-            rgb_index, tex_index, shade_rate, rgb_tint, pError)) {
+            rgb_index, tex_index, shade_rate,
+            draw_rate, rgb_tint, pError)) {
         status = 0;
       }
     }
@@ -829,6 +868,10 @@ const char *ttable_errorString(int code) {
     
     case TTABLE_ERR_DUP:
       pResult = "Duplicate record for RGB index";
+      break;
+    
+    case TTABLE_ERR_DRAW:
+      pResult = "Drawing rate out of range";
       break;
     
     default:
@@ -1055,6 +1098,7 @@ void ttable_query(SHADEREC *psr) {
     /* Default record */
     psr->tidx = 1;
     psr->srate = 0;
+    psr->drate = 255;
     psr->rgbtint = UINT32_C(0xffffffff);
   }
 }
