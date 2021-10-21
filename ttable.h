@@ -63,6 +63,9 @@ typedef struct {
    * 
    * Only the 24 least significant bits are used.  The eight most
    * significant bits are set to zero.
+   * 
+   * If this has the special value of 0xffffffff, the colorizer is
+   * disabled for this texture.
    */
   uint32_t rgbtint;
   
