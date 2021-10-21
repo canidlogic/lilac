@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "gamma.h"
 #include "sophistry.h"
 #include "texture.h"
 #include "ttable.h"
@@ -471,6 +472,8 @@ static uint32_t fade(uint32_t rgb, int rate) {
  * 
  * under is the 32-bit ARGB color that is underneath.
  * 
+ * Gamma table must be initialized before calling.
+ * 
  * Parameters:
  * 
  *   over - the over color
@@ -491,9 +494,6 @@ static uint32_t composite(uint32_t over, uint32_t under) {
   float af = 0.0f;
   float mo = 0.0f;
   float mu = 0.0f;
-  
-  /* @@FIXME: this would be better if gamma correction were undone
-   * before the operation and then re-applied afterwards */
   
   /* Initialize structures */
   memset(&co, 0, sizeof(SPH_ARGB));
@@ -520,26 +520,17 @@ static uint32_t composite(uint32_t over, uint32_t under) {
     /* Non-zero output alpha -- composite each component */
     cf.a = (int) floor(((double) af) * 255.0);
     
-    mo = ((float) co.r) / 255.0f;
-    mu = ((float) cu.r) / 255.0f;
+    mo = gamma_undo(co.r);
+    mu = gamma_undo(cu.r);
+    cf.r = gamma_correct(((mo * ao) + (mu * au * (1.0f - ao))) / af);
     
-    cf.r = (int) floor((double) (
-                    ((mo * ao) + (mu * au * (1.0f - ao))) / af
-                  ) * 255.0);
+    mo = gamma_undo(co.g);
+    mu = gamma_undo(cu.g);
+    cf.g = gamma_correct(((mo * ao) + (mu * au * (1.0f - ao))) / af);
     
-    mo = ((float) co.g) / 255.0f;
-    mu = ((float) cu.g) / 255.0f;
-    
-    cf.g = (int) floor((double) (
-                    ((mo * ao) + (mu * au * (1.0f - ao))) / af
-                  ) * 255.0);
-    
-    mo = ((float) co.b) / 255.0f;
-    mu = ((float) cu.b) / 255.0f;
-    
-    cf.b = (int) floor((double) (
-                    ((mo * ao) + (mu * au * (1.0f - ao))) / af
-                  ) * 255.0);
+    mo = gamma_undo(co.b);
+    mu = gamma_undo(cu.b);
+    cf.b = gamma_correct(((mo * ao) + (mu * au * (1.0f - ao))) / af);
     
   } else {
     /* Zero output alpha, so final is fully transparent */
@@ -769,6 +760,9 @@ static int lilac(
   *pError = 0;
   *pErrLoc = ERRORLOC_UNKNOWN;
   
+  /* Initialize gamma correction tables for sRGB */
+  gamma_sRGB();
+  
   /* Open readers on each input file */
   if (status) {
     pMaskRead = sph_image_reader_newFromPath(pMaskPath, &errcode);
@@ -945,8 +939,10 @@ static int lilac(
                               texture_pixel(1, x, y)),
                             UINT32_C(0xffffffff));
             
-            /* Colorize the output */
-            pOutScan[x] = colorize(pOutScan[x], srec.rgbtint);
+            /* Colorize the output (unless disabled) */
+            if (srec.rgbtint != UINT32_C(0xffffffff)) {
+              pOutScan[x] = colorize(pOutScan[x], srec.rgbtint);
+            }
           
           } else {
             /* Mask file black, pencil file white -- get shade record */
@@ -966,8 +962,10 @@ static int lilac(
                               texture_pixel(1, x, y)),
                             UINT32_C(0xffffffff));
             
-            /* Colorize the output */
-            pOutScan[x] = colorize(pOutScan[x], srec.rgbtint);
+            /* Colorize the output (unless disabled) */
+            if (srec.rgbtint != UINT32_C(0xffffffff)) {
+              pOutScan[x] = colorize(pOutScan[x], srec.rgbtint);
+            }
           }
         }
       }
