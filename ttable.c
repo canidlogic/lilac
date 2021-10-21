@@ -70,6 +70,7 @@ static int addRecord(
     int     * pError);
 
 static int readchar(FILE *pf, int *pChar);
+static int isblank(char *pstr);
 static char *skipSpace(char *pstr, int optional);
 static char *readRGB(char *pstr, int32_t *pRGB);
 static char *readInt(char *pstr, int *pv);
@@ -177,7 +178,7 @@ static int addRecord(
   if ((shade_rate < 0) || (shade_rate > 255)) {
     abort();
   }
-  if ((rgb_tint < 0) || (rgb_tint > INT32_C(0xffffff))) {
+  if ((rgb_tint < -1) || (rgb_tint > INT32_C(0xffffff))) {
     abort();
   }
   if (pError == NULL) {
@@ -280,7 +281,11 @@ static int addRecord(
     psr->rgbidx = rgb_index;
     psr->tidx = tex_index;
     psr->srate = shade_rate;
-    psr->rgbtint = rgb_tint;
+    if (rgb_tint >= 0) {
+      psr->rgbtint = rgb_tint;
+    } else {
+      psr->rgbtint = UINT32_C(0xffffffff);
+    }
   }
   
   /* Return status */
@@ -341,6 +346,42 @@ static int readchar(FILE *pf, int *pChar) {
   
   /* Return status */
   return status;
+}
+
+/*
+ * Check whether a given string is blank.
+ * 
+ * This is true only if the string is empty or consists only of spaces
+ * and tabs.
+ * 
+ * Parameters:
+ * 
+ *   pstr - the string to check
+ * 
+ * Return:
+ * 
+ *   non-zero if blank, zero if not
+ */
+static int isblank(char *pstr) {
+  
+  int result = 0;
+  
+  /* Check parameters */
+  if (pstr == NULL) {
+    abort();
+  }
+  
+  /* Check if blank */
+  result = 1;
+  for( ; *pstr != 0; pstr++) {
+    if ((*pstr != ASCII_SP) && (*pstr != ASCII_HT)) {
+      result = 0;
+      break;
+    }
+  }
+  
+  /* Return result */
+  return result;
 }
 
 /*
@@ -577,7 +618,6 @@ static int parseLine(char *pstr, int *pError) {
   
   int status = 1;
   char *pc = NULL;
-  int isblank = 0;
   
   int32_t rgb_index = 0;
   int tex_index = 0;
@@ -598,18 +638,8 @@ static int parseLine(char *pstr, int *pError) {
     }
   }
   
-  /* If the line is empty or consists only of spaces and tabs, set the
-   * isblank flag */
-  isblank = 1;
-  for(pc = pstr; *pc != 0; pc++) {
-    if ((*pc != ASCII_SP) && (*pc != ASCII_HT)) {
-      isblank = 0;
-      break;
-    }
-  }
-  
   /* Only proceed if line is not blank, else ignore */
-  if (!isblank) {
+  if (!isblank(pstr)) {
     
     /* Skip optional whitespace */
     pstr = skipSpace(pstr, 1);
@@ -658,35 +688,45 @@ static int parseLine(char *pstr, int *pError) {
       }
     }
     
-    /* Required whitespace */
+    /* Only proceed for RGB tint if present */
     if (status) {
-      pstr = skipSpace(pstr, 0);
-      if (pstr == NULL) {
-        *pError = TTABLE_ERR_SP;
-        status = 0;
-      }
-    }
+      if (!isblank(pstr)) {
     
-    /* Read RGB tint */
-    if (status) {
-      pstr = readRGB(pstr, &rgb_tint);
-      if (pstr == NULL) {
-        *pError = TTABLE_ERR_RGB;
-        status = 0;
-      }
-    }
+        /* Required whitespace */
+        if (status) {
+          pstr = skipSpace(pstr, 0);
+          if (pstr == NULL) {
+            *pError = TTABLE_ERR_SP;
+            status = 0;
+          }
+        }
     
-    /* Skip optional whitespace */
-    if (status) {
-      pstr = skipSpace(pstr, 1);
-      assert(pstr != NULL);
-    }
+        /* Read RGB tint */
+        if (status) {
+          pstr = readRGB(pstr, &rgb_tint);
+          if (pstr == NULL) {
+            *pError = TTABLE_ERR_RGB;
+            status = 0;
+          }
+        }
     
-    /* Nothing should remain */
-    if (status) {
-      if (*pstr != 0) {
-        *pError = TTABLE_ERR_UNX;
-        status = 0;
+        /* Skip optional whitespace */
+        if (status) {
+          pstr = skipSpace(pstr, 1);
+          assert(pstr != NULL);
+        }
+    
+        /* Nothing should remain */
+        if (status) {
+          if (*pstr != 0) {
+            *pError = TTABLE_ERR_UNX;
+            status = 0;
+          }
+        }
+      
+      } else {
+        /* No tint provided, so disabled colorizer for this texture */
+        rgb_tint = -1;
       }
     }
     
@@ -1015,6 +1055,6 @@ void ttable_query(SHADEREC *psr) {
     /* Default record */
     psr->tidx = 1;
     psr->srate = 0;
-    psr->rgbtint = INT32_C(0xffffff);
+    psr->rgbtint = UINT32_C(0xffffffff);
   }
 }
