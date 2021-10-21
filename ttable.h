@@ -28,7 +28,8 @@
 #define TTABLE_ERR_RATE (10)  /* Shading rate out of range */
 #define TTABLE_ERR_TEX  (11)  /* Texture index out of range */
 #define TTABLE_ERR_RECS (12)  /* Too many records */
-#define TTABLE_ERR_DUP  (13)  /* Duplicate record */ 
+#define TTABLE_ERR_DUP  (13)  /* Duplicate record */
+#define TTABLE_ERR_DRAW (14)  /* Drawing rate out of range */
 
 /*
  * Shading record structure.
@@ -54,9 +55,16 @@ typedef struct {
   /*
    * The shading rate.
    * 
-   * This is in range [0, 100].
+   * This is in range [0, 255].
    */
   int srate;
+  
+  /*
+   * The drawing rate.
+   * 
+   * This is in range [0, 255].
+   */
+  int drate;
   
   /*
    * The RGB tint for colorization.
