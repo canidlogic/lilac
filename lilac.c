@@ -931,11 +931,17 @@ static int lilac(
             srec.rgbidx = rgbindex;
             ttable_query(&srec);
             
-            /* Get the second texture over the first texture over
+            /* Begin with the second texture faded by the drawing
+             * rate */
+            pOutScan[x] = fade(
+                            texture_pixel(2, x, y),
+                            srec.drate);
+            
+            /* Get the faded pencil texture over the first texture over
              * white */
             pOutScan[x] = composite(
                             composite(
-                              texture_pixel(2, x, y),
+                              pOutScan[x],
                               texture_pixel(1, x, y)),
                             UINT32_C(0xffffffff));
             
@@ -1010,7 +1016,7 @@ int main(int argc, char *argv[]) {
   int i = 0;
   int errcode = 0;
   int errloc = 0;
-  
+
   /* Get module name */
   if (argc > 0) {
     if (argv != NULL) {
@@ -1020,7 +1026,7 @@ int main(int argc, char *argv[]) {
   if (pModule == NULL) {
     pModule = "lilac";
   }
-  
+ 
   /* Check parameters */
   if (argc < 0) {
     abort();
@@ -1033,7 +1039,7 @@ int main(int argc, char *argv[]) {
       abort();
     }
   }
-  
+
   /* In addition to the module name, we must have at least seven
    * additional parameters */
   if (argc < 8) {
