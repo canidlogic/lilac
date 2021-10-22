@@ -24,16 +24,14 @@ There are four kinds of resources that may be declared in a loading script:
 
 1. Full-frame images
 2. Texture images
-3. Reverse palette maps
+3. Reverse palettes
 4. Meshes
 
-The first three resources are based on external PNG image files.  Full-frame images are PNG image files that must have the same dimensions as the dimensions declared for the output image.  Full-frame images only have one scanline at a time in memory, so they can be large.  For each pixel in the output image that is rendered, Lilac makes available the color values from each full-frame image resource at the corresponding pixel location in that image.
+The first two resources are based on external PNG image files.  Full-frame images are PNG image files that must have the same dimensions as the dimensions declared for the output image.  Full-frame images only have one scanline at a time in memory, so they can be large.  For each pixel in the output image that is rendered, Lilac makes available the color values from each full-frame image resource at the corresponding pixel location in that image.
 
 Texture images are smaller PNG image files that are loaded entirely into memory.  Unlike full-frame images, texture images do not have to have the same image dimensions as the output image file.  Texture images are automatically tiled to cover the full surface area of the output image, if necessary.
 
-Reverse palette maps must be based on a full-frame image or texture image that has already been declared.  Reverse palette maps transform the pixel colors from the underlying image through a _reverse palette_ to generate string values for each pixel.  The underlying image may not have any alpha channel values below full opacity or an error occurs.
-
-The reverse palette is a mapping of specific RGB colors to string values.  Each RGB color in the underlying image must have an entry in the reverse palette.  The RGB color of the underlying image is replaced by the string entry in the reverse palette.
+Reverse palettes are external text files that contain a mapping from unique RGB colors to string values.  The format of these reverse palette text files is described in `ReversePalette.md`.  During rendering, the render script is able to transform image resources through a reverse palette.
 
 Meshes are two-dimensional triangle meshes that are loaded from a mesh file that has a format described in `MeshFormat.md`.  Unlike the other resource types, meshes are vector resources that are not based on any underlying raster bitmap.  Lilac has a built-in scanline renderer that renders the triangle meshes for each scanline.
 
