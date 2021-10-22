@@ -39,4 +39,48 @@ For each pixel, the scanline-rendered mesh either has a special _absent_ value, 
 
 The loading script also allows meshes that have been loaded into memory to receive minor edits before they are rendered.  These edits allow vertices to be fused between different meshes, so that there can be seamless boundaries between different meshes.  The specifics of vertex fusion are described later in this document.
 
+## 4. Header
+
+Load scripts must begin with a header, which is a sequence of Shastina metacommands.  The header has the following format:
+
+1. Signature
+2. Metavariables
+
+The signature is the following metacommand, which identifies the Shastina file as a Lilac load script:
+
+    %lilac-load;
+
+The metavariables are a sequence of metavariable commands.  Each metavariable command has the following syntax:
+
+1. Opening meta symbol `%`
+2. Name of metavariable
+3. (Whitespace)
+4. Value of metavariable
+5. Closing meta symbol `;`
+
+The name of the metavariable must be a Shastina metacommand token that matches a known Lilac metavariable name.  The value of the metavariable must either be a Shastina metacommand token or a double-quoted Shastina metacommand string.  Integer metavariables have a token value that must be a signed integer, while string metavariables must have a double-quoted string value.
+
+String metavariables support two escape codes.  `\\` is the escape code for a literal backslash, while `\"` is the escape code for a double quote.
+
+The following metavariables are __required__ and must be set in every Lilac load script header:
+
+1. [Integer] `width` &mdash; the output image width in pixels
+2. [Integer] `height` &mdash; the output image height in pixels
+3. [String] `rscript` &mdash; path to the Lua render script
+
+The following metavariable is __optional__:
+
+1. [String] `rfunc` &mdash; name of the render function
+
+If `rfunc` is not defined, its default value is `render`.  The render function name is the name of the function within the Lua render script that is called to render each pixel.  See `RenderScript.md` for further details.
+
+Each metavariable may be set at most once in the header.  The variables may be set in any order.  The header ends at the first encountered Shastina entity that is not part of a metacommand.
+
+An example Lilac load script header looks like this:
+
+    %lilac-load;
+    %width   1920;
+    %height  1080;
+    %rscript "render_script.lua";
+
 @@TODO:
