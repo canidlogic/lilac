@@ -8,8 +8,10 @@ Lilac is a program for synthesizing raster images.
 
 The syntax of the Lilac program is:
 
-    lilac [script]
-    lilac [script] [reduce]
+    lilac [out] [script]
+    lilac [out] [script] [reduce]
+
+The `[out]` parameter is the path to the image file to generate.  It must have a PNG file extension.
 
 The `[script]` parameter is the path to a Shastina script that specifies how the Lilac program will run.  For the format of this script, see the `LoadScript.md` document in the `doc` directory.
 
