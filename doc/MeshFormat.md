@@ -2,7 +2,7 @@
 
 A Lilac mesh is a two-dimensional triangle mesh that is intended to add three-dimensional normal data to an existing two-dimensional image.
 
-Lilac meshes are stored in Shastina text files.  The specific dialect of Shastina used for Lilac mesh files is described in this document.
+Lilac meshes are stored in [Shastina](http://www.purl.org/canidtech/r/shastina) text files.  The specific dialect of Shastina used for Lilac mesh files is described in this document.
 
 ## 1. Header
 
