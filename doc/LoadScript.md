@@ -58,7 +58,7 @@ The metavariables are a sequence of metavariable commands.  Each metavariable co
 4. Value of metavariable
 5. Closing meta symbol `;`
 
-The name of the metavariable must be a Shastina metacommand token that matches a known Lilac metavariable name.  The value of the metavariable must either be a Shastina metacommand token or a double-quoted Shastina metacommand string.  Integer metavariables have a token value that must be a signed integer, while string metavariables must have a double-quoted string value.
+The name of the metavariable must be a Shastina metacommand token that matches a known Lilac metavariable name.  The value of the metavariable must either be a Shastina metacommand token or a double-quoted Shastina metacommand string.  Integer metavariables have a token value that must be a signed integer in 32-bit range, while string metavariables must have a double-quoted string value.
 
 String metavariables support two escape codes.  `\\` is the escape code for a literal backslash, while `\"` is the escape code for a double quote.
 
@@ -72,7 +72,7 @@ The following metavariable is __optional__:
 
 1. [String] `rfunc` &mdash; name of the render function
 
-If `rfunc` is not defined, its default value is `render`.  The render function name is the name of the function within the Lua render script that is called to render each pixel.  See `RenderScript.md` for further details.
+If `rfunc` is not defined, its default value is `render`.  The render function name is the name of the function within the Lua render script that is called to render each pixel.  See `RenderScript.md` for further details.  If a name is explicitly declared, it must be a sequence of one or more ASCII letters, digits, and/or underscores, and the first character may not be a digit.
 
 Each metavariable may be set at most once in the header.  The variables may be set in any order.  The header ends at the first encountered Shastina entity that is not part of a metacommand.
 
@@ -83,4 +83,62 @@ An example Lilac load script header looks like this:
     %height  1080;
     %rscript "render_script.lua";
 
-@@TODO:
+## 5. Body
+
+The body of the Lilac load script is used to declare all the resources that will be made available to the rendering script.  The body begins at the first entity in the load script that is not part of a metacommand.
+
+Only the following Shastina entities are supported in the body of the loading script:
+
+- `STRING`
+- `NUMERIC`
+- `OPERATION`
+
+The body ends at the EOF marker `|;`
+
+String entities must be double-quoted with no string prefix before the opening double quote.  They support `\\` as an escape for a literal backslash and `\"` as an escape for a double quote.  The result of a string entity is to push the string value on top of the interpreter stack.
+
+Numeric entities must be signed integers in 32-bit range.  The result of a numeric entity is to push the numeric value on top of the interpreter stack.
+
+Operation entities perform a specific operation using the data on the stack.  Operations are described later in this document.
+
+When the EOF marker `|;` is reached, the interpreter stack must be empty.  Nothing but whitespace is allowed after the EOF marker.
+
+## 6. Operations
+
+This section describes the operations that are available within the body of the loading script.  These operations are used to declare resources.
+
+Each operation header line below shows the syntax of the operation.  To the left of the operation name are the parameters that must be present on top of the interpreter stack when the operation is invoked, with the rightmost parameter on top.  The parameters are popped off the interpreter stack at the start of the operation.  To the right of the operation name are the parameters that are output from the operation, with the rightmost parameter on top of the interpreter stack upon return from the operation.  If a hyphen `-` appears on the left and/or right side of the operation, it means that there are no input and/or output parameters.
+
+Declared resources are each given a name.  The name must be a sequence of one or more ASCII letters, digits, and/or underscores.  Each resource name must be unique (case sensitive) within the loading script, and resources may not be re-declared.
+
+    [name] [path] frame -
+
+Declare a full-frame image resource.  `[name]` is the name of the resource and `[path]` is the path to the image file, which must have a PNG extension.  The image must have the same dimensions as the output image dimensions declared in the header of the script.
+
+    [name] [path] texture -
+
+Declare a texture image resource.  `[name]` is the name of the resource and `[path]` is the path to the image file, which must have a PNG extension.  The image does __not__ need to have the same dimensions as the output image, but its size is limited since texture images must be loaded fully into memory.  Lilac will always support texture images up to 2048 by 2048 pixels.
+
+    [name] [path] rpal -
+
+Declare a reverse palette.  `[name]` is the name of the resource and `[path]` is the path to the reverse palette text file.
+
+    [name] [path] mesh -
+
+Declare a mesh resource.  `[name]` is the name of the resource and `[path]` is the path to the mesh file.
+
+    [anchor] [edit] [x] [y] anchor -
+
+Edit the mesh resource that has already been loaded with name `[edit]` by finding the vertex within that mesh nearest to the point (`[x]`, `[y]`), and changing both its location and direction vector to match the vertex within the mesh resource named `[anchor]` that is nearest to the point (`[x]`, `[y]`).  Both `[x]` and `[y]` must be integers in range [0, 16384], where (0, 0) is the __bottom__ left corner of the mesh coordinate system and (16384, 16384) is the __top__ right corner of the mesh coordinate system.
+
+    [anchor] [edit] [x] [y] anchor_seam -
+
+Same as the `anchor` operator, except that only the location of the vertex is adjusted.  The direction vector is not modified.
+
+    [m1] [m2] [x] [y] fuse -
+
+Edit the two mesh resources with names `[m1]` and `[m2]` that have already been declared.  Find the vertex within each mesh that is nearest to the point (`[x]`, `[y]`), and change the locations and directions of both vertices so that the vertices are the same in both meshes, with the location and direction values being the average of the original values within the two meshes.  Both `[x]` and `[y]` must be integers in range [0, 16384], where (0, 0) is the __bottom__ left corner of the mesh coordinate system and (16384, 16384) is the __top__ right corner of the mesh coordinate system.
+
+    [m1] [m2] [x] [y] fuse_seam -
+
+Same as the `fuse` operator, except that only the locations of the vertices are adjusted.  The direction vectors are not modified.
