@@ -35,7 +35,7 @@
  * 
  *   the total number of frames
  */
-int32_t frame_count();
+int32_t frame_count(void);
 
 /*
  * Register another frame with the frame module.
