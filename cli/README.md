@@ -25,6 +25,8 @@ This program has the following indirect external dependencies:
 
 The math library `-lm` may be required on certain platforms.
 
+The dynamic loader library `-ldl` may be required on certain platforms.  This is required by Lua for loading the Lua standard libraries.
+
 If you are in the root directory of this project, you can build the program with the following GCC invocation (all on one line):
 
     gcc -O2 -o cli/lilac_draw
@@ -40,6 +42,7 @@ If you are in the root directory of this project, you can build the program with
       texture.c
       ttable.c
       -lm
+      -ldl
       -lsophistry
       -llua
       `pkg-config --libs libpng`
