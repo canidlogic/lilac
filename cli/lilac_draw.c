@@ -180,7 +180,7 @@ static VTEX m_vtx[TEXTURE_MAXCOUNT];
 /* Function prototypes */
 static void vtx_init(void);
 static int vtx_load(const char *pstr);
-uint32_t vtx_query(int tidx, int32_t x, int32_t y);
+uint32_t vtx_query(int tidx, int32_t x, int32_t y, int *status);
 
 static const char *lilac_errorString(int code);
 
@@ -366,6 +366,11 @@ static int vtx_load(const char *pstr) {
  * The return value is packed ARGB value in the same format as Sophistry
  * uses.
  * 
+ * If the query is successful, *status will be unchanged by this
+ * function.  If the query fails, *status will be set to zero and the
+ * return value will be zero.  But note that a return value of zero also
+ * can be the result of a successful query!
+ * 
  * Parameters:
  * 
  *   tidx - the virtual texture to query
@@ -374,11 +379,13 @@ static int vtx_load(const char *pstr) {
  * 
  *   y - the Y coordinate
  * 
+ *   status - pointer to the status flag
+ * 
  * Return:
  * 
  *   the ARGB value of the given virtual texture at the given coordinate
  */
-uint32_t vtx_query(int tidx, int32_t x, int32_t y) {
+uint32_t vtx_query(int tidx, int32_t x, int32_t y, int *status) {
   
   uint32_t result = 0;
   
@@ -387,6 +394,11 @@ uint32_t vtx_query(int tidx, int32_t x, int32_t y) {
   
   /* Initialize virtual texture table if needed */
   vtx_init();
+  
+  /* Check status parameter */
+  if (status == NULL) {
+    abort();
+  }
   
   /* Enforce proper scanning order and update statistics */
   if (y > s_last_y) {
@@ -1297,19 +1309,21 @@ static int lilac(
             /* Begin with the second texture faded by the drawing
              * rate */
             pOutScan[x] = fade(
-                            vtx_query(2, x, y),
+                            vtx_query(2, x, y, &status),
                             srec.drate);
             
             /* Get the faded pencil texture over the first texture over
              * white */
-            pOutScan[x] = composite(
-                            composite(
-                              pOutScan[x],
-                              vtx_query(1, x, y)),
-                            UINT32_C(0xffffffff));
+            if (status) {
+              pOutScan[x] = composite(
+                              composite(
+                                pOutScan[x],
+                                vtx_query(1, x, y, &status)),
+                              UINT32_C(0xffffffff));
+            }
             
             /* Colorize the output (unless disabled) */
-            if (srec.rgbtint != UINT32_C(0xffffffff)) {
+            if (status && (srec.rgbtint != UINT32_C(0xffffffff))) {
               pOutScan[x] = colorize(pOutScan[x], srec.rgbtint);
             }
           
@@ -1321,20 +1335,27 @@ static int lilac(
             /* Begin with the requested texture faded by the shading
              * rate */
             pOutScan[x] = fade(
-                            vtx_query(srec.tidx, x, y),
+                            vtx_query(srec.tidx, x, y, &status),
                             srec.srate);
             
             /* Composite over the first texture and then pure white */
-            pOutScan[x] = composite(
-                            composite(
-                              pOutScan[x],
-                              vtx_query(1, x, y)),
-                            UINT32_C(0xffffffff));
+            if (status) {
+              pOutScan[x] = composite(
+                              composite(
+                                pOutScan[x],
+                                vtx_query(1, x, y, &status)),
+                              UINT32_C(0xffffffff));
+            }
             
             /* Colorize the output (unless disabled) */
-            if (srec.rgbtint != UINT32_C(0xffffffff)) {
+            if (status && (srec.rgbtint != UINT32_C(0xffffffff))) {
               pOutScan[x] = colorize(pOutScan[x], srec.rgbtint);
             }
+          }
+          
+          /* Leave loop if error */
+          if (!status) {
+            break;
           }
         }
       }
