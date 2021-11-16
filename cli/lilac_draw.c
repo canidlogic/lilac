@@ -21,13 +21,6 @@
 #include "ttable.h"
 
 /*
- * The Sophistry output encoding quality value.
- * 
- * This is only used with JPEG output, which is not recommended.
- */
-#define OUT_QUALITY (90)
-
-/*
  * Error code definitions.
  * 
  * Remember to update lilac_errorString()!
@@ -832,7 +825,7 @@ static int lilac(
                 width,
                 height,
                 SPH_IMAGE_DOWN_NONE,
-                OUT_QUALITY,
+                0,
                 &errcode);
     if (pWriter == NULL) {
       *pError = errcode + ERROR_SPH_MIN;
