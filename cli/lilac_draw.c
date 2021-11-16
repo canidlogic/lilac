@@ -1,5 +1,6 @@
 /*
  * lilac_draw.c
+ * ============
  * 
  * Lilac drawing program.
  * 
@@ -21,6 +22,11 @@
 #include "ttable.h"
 
 /*
+ * Constants
+ * =========
+ */
+
+/*
  * Error code definitions.
  * 
  * Remember to update lilac_errorString()!
@@ -40,6 +46,11 @@
 #define ERRORLOC_MASKFILE     (2)
 #define ERRORLOC_PENCILFILE   (3)
 #define ERRORLOC_SHADINGFILE  (4)
+
+/*
+ * Type declarations
+ * =================
+ */
 
 /*
  * Stores an HSL color with floating-point channels.
@@ -75,6 +86,11 @@ typedef struct {
   float b;
   
 } RGB;
+
+/*
+ * Local functions
+ * ===============
+ */
 
 /* Function prototypes */
 static const char *lilac_errorString(int code);
@@ -1001,8 +1017,10 @@ static int lilac(
 }
 
 /*
- * Program entrypoint.
+ * Program entrypoint
+ * ==================
  */
+
 int main(int argc, char *argv[]) {
 
   char *pModule = NULL;
