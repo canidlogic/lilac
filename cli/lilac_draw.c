@@ -180,7 +180,13 @@ static VTEX m_vtx[TEXTURE_MAXCOUNT];
 /* Function prototypes */
 static void vtx_init(void);
 static int vtx_load(const char *pstr);
-uint32_t vtx_query(int tidx, int32_t x, int32_t y, int *status);
+uint32_t vtx_query(
+    int       tidx,
+    int32_t   x,
+    int32_t   y,
+    int32_t   width,
+    int32_t   height,
+    int     * status);
 
 static const char *lilac_errorString(int code);
 
@@ -363,6 +369,10 @@ static int vtx_load(const char *pstr) {
  * pixels may only be queries in order left-to-right through scanlines,
  * and scanlines from top to bottom through image.
  * 
+ * width and height are the width and height in pixels of the output
+ * image that is being rendered.  x and y must both be greater than or
+ * equal to zero and less than width and height, respectively.
+ * 
  * The return value is packed ARGB value in the same format as Sophistry
  * uses.
  * 
@@ -379,13 +389,23 @@ static int vtx_load(const char *pstr) {
  * 
  *   y - the Y coordinate
  * 
+ *   width - the width of the output image
+ * 
+ *   height - the height of the output image
+ * 
  *   status - pointer to the status flag
  * 
  * Return:
  * 
  *   the ARGB value of the given virtual texture at the given coordinate
  */
-uint32_t vtx_query(int tidx, int32_t x, int32_t y, int *status) {
+uint32_t vtx_query(
+    int       tidx,
+    int32_t   x,
+    int32_t   y,
+    int32_t   width,
+    int32_t   height,
+    int     * status) {
   
   uint32_t result = 0;
   
@@ -395,8 +415,15 @@ uint32_t vtx_query(int tidx, int32_t x, int32_t y, int *status) {
   /* Initialize virtual texture table if needed */
   vtx_init();
   
-  /* Check status parameter */
+  /* Check status parameter, dimensions, and coordinates */
   if (status == NULL) {
+    abort();
+  }
+  if ((width < 1) || (height < 1)) {
+    abort();
+  }
+  if ((x < 0) || (x >= width) ||
+      (y < 0) || (y >= height)) {
     abort();
   }
   
@@ -1309,7 +1336,7 @@ static int lilac(
             /* Begin with the second texture faded by the drawing
              * rate */
             pOutScan[x] = fade(
-                            vtx_query(2, x, y, &status),
+                            vtx_query(2, x, y, width, height, &status),
                             srec.drate);
             
             /* Get the faded pencil texture over the first texture over
@@ -1318,7 +1345,8 @@ static int lilac(
               pOutScan[x] = composite(
                               composite(
                                 pOutScan[x],
-                                vtx_query(1, x, y, &status)),
+                                vtx_query(
+                                  1, x, y, width, height, &status)),
                               UINT32_C(0xffffffff));
             }
             
@@ -1335,7 +1363,8 @@ static int lilac(
             /* Begin with the requested texture faded by the shading
              * rate */
             pOutScan[x] = fade(
-                            vtx_query(srec.tidx, x, y, &status),
+                            vtx_query(
+                              srec.tidx, x, y, width, height, &status),
                             srec.srate);
             
             /* Composite over the first texture and then pure white */
@@ -1343,7 +1372,8 @@ static int lilac(
               pOutScan[x] = composite(
                               composite(
                                 pOutScan[x],
-                                vtx_query(1, x, y, &status)),
+                                vtx_query(
+                                  1, x, y, width, height, &status)),
                               UINT32_C(0xffffffff));
             }
             
