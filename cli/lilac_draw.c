@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "gamma.h"
 #include "sophistry.h"
@@ -1071,6 +1072,9 @@ static int lilac(
   int32_t x = 0;
   int32_t y = 0;
   
+  time_t last_update = (time_t) 0;
+  time_t current = (time_t) 0;
+  
   /* Initialize structures */
   memset(&argb, 0, sizeof(SPH_ARGB));
   memset(&srec, 0, sizeof(SHADEREC));
@@ -1177,10 +1181,36 @@ static int lilac(
   if (status) {
     pOutScan = sph_image_writer_ptr(pWriter);
   }
- 
+  
+  /* Begin with the update timer and current time set to the current
+   * time (or -1 if error) */
+  if (status) {
+    last_update = time(NULL);
+    current = last_update;
+  }
+  
   /* Go through each scanline */
   if (status) {
     for(y = 0; y < height; y++) {
+
+      /* If there hasn't been a timer error, see if we need a status
+       * update */
+      if ((last_update != (time_t)-1) && (current != (time_t)-1)) {
+        /* Get current time */
+        current = time(NULL);
+        
+        /* Only proceed if we successfully read current time */
+        if (current != (time_t)-1) {
+          /* If current time has changed, then update last_update and
+           * print a status report */
+          if (last_update != current) {
+            last_update = current;
+            fprintf(stderr, "%s: Rendering %ld / %ld (%.1f%%)\n",
+              pModule, (long) (y + 1), (long) height,
+              (((double) (y + 1)) / ((double) height)) * 100.0);
+          }
+        }
+      }
 
       /* Load each scanline from the input files */
       if (status) {
