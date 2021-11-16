@@ -8,7 +8,7 @@
 
 The syntax of the Lilac drawing program is:
 
-    lilac_draw [out] [mask] [pencil] [shading] [table] [texture_1] ... [texture_n]
+    lilac_draw [out] [mask] [pencil] [shading] [table] [pshade] [texture_1] ... [texture_n]
 
 The `[out]` parameter is the path to write the output image file.  The path must have a PNG format extension.
 
@@ -19,6 +19,8 @@ The `[pencil]` parameter is the path to an image file to read as the pencil file
 The `[shading]` parameter is the path to an image file to read as the shading file.  The path must have a PNG image format extension.
 
 The `[table]` parameter is the path to a text file specifying shading information.  The format of this file is described in section 2.1 "Table file syntax".
+
+The `[pshade]` parameter is the path to a Lua script that will serve as the programmable shader.  Use a hyphen `-` if there is no programmable shader script to load.
 
 The `[texture_1]` ... `[texture_n]` is an array of parameters specifying paths to image files to read as texture files.  Each path must have a PNG image format extension.  There must be at least two textures.  The first texture is always the background (paper) texture, and the second texture is always the pencil texture.
 
