@@ -14,8 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "texture.h"
-
 /*
  * Constants
  * =========
@@ -75,7 +73,7 @@ static int is_blank(char *pstr);
 static char *skipSpace(char *pstr, int optional);
 static char *readRGB(char *pstr, int32_t *pRGB);
 static char *readInt(char *pstr, int *pv);
-static int parseLine(char *pstr, int *pError);
+static int parseLine(char *pstr, int tcount, int *pError);
 
 /*
  * Initialize the shading table, if necessary.
@@ -129,8 +127,8 @@ static void shiftRecs(int start) {
  * An error occurs if that RGB index is already in the table.
  * 
  * tex_index is the texture index.  A fault occurs if it is less than
- * one.  An error occurs if it does not correspond to a registered
- * texture in the texture module.
+ * one.  The upper bound of the texture index is NOT checked, so the
+ * caller should do this.
  * 
  * shade_rate is the shading rate.  A fault occurs if it is not in the
  * range [0, 255].
@@ -193,12 +191,6 @@ static int addRecord(
   }
   if (pError == NULL) {
     abort();
-  }
-  
-  /* Verify that tex_index is valid with texture module */
-  if (tex_index > texture_count()) {
-    *pError = TTABLE_ERR_TEX;
-    status = 0;
   }
   
   /* Initialize shading table if necessary */
@@ -612,6 +604,9 @@ static char *readInt(char *pstr, int *pv) {
  * The line should be nul-terminated.  The line may be modified by this
  * function by shortening.
  * 
+ * tcount is the total number of virtual textures that have been
+ * defined.  This is used for range-checking texture indices.
+ * 
  * pError points to the variable to receive the error code if the
  * function fails.  It may not be NULL.
  * 
@@ -625,7 +620,7 @@ static char *readInt(char *pstr, int *pv) {
  * 
  *   non-zero if successful, zero if error
  */
-static int parseLine(char *pstr, int *pError) {
+static int parseLine(char *pstr, int tcount, int *pError) {
   
   int status = 1;
   char *pc = NULL;
@@ -637,7 +632,7 @@ static int parseLine(char *pstr, int *pError) {
   int32_t rgb_tint = 0;
   
   /* Check parameters */
-  if ((pstr == NULL) || (pError == NULL)) {
+  if ((pstr == NULL) || (pError == NULL) || (tcount < 0)) {
     abort();
   }
   
@@ -760,9 +755,9 @@ static int parseLine(char *pstr, int *pError) {
       }
     }
     
-    /* Range-check texture index lower bound */
+    /* Range-check texture index */
     if (status) {
-      if (tex_index < 1) {
+      if ((tex_index < 1) || (tex_index > tcount)) {
         *pError = TTABLE_ERR_TEX;
         status = 0;
       }
@@ -884,7 +879,11 @@ const char *ttable_errorString(int code) {
 /*
  * ttable_parse function.
  */
-int ttable_parse(const char *pPath, int *pError, int *pLineNum) {
+int ttable_parse(
+    const char * pPath,
+          int  * pError,
+          int  * pLineNum,
+          int    tcount) {
   
   int dummy = 0;
   int status = 1;
@@ -901,6 +900,9 @@ int ttable_parse(const char *pPath, int *pError, int *pLineNum) {
   
   /* Check parameters */
   if (pPath == NULL) {
+    abort();
+  }
+  if (tcount < 0) {
     abort();
   }
   
@@ -1000,7 +1002,7 @@ int ttable_parse(const char *pPath, int *pError, int *pLineNum) {
     
     /* Parse the line */
     if (status) {
-      if (!parseLine(buf, pError)) {
+      if (!parseLine(buf, tcount, pError)) {
         *pLineNum = linenum;
         status = 0;
       }
