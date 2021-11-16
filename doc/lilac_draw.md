@@ -53,6 +53,8 @@ The tint is the RGB color used for colorization.  Colorization is the last step 
 
 In short, the colorizer combines the brightness of the input RGB value with the color of the tint to form the output value.
 
+To disable the colorizer, set a tint value of FFFFFF.  In this case, no colorization step will be performed.
+
 The texture index is an unsigned integer that selects one of the texture files that was passed to the Lilac program.  A value of one selects the first texture file, two selects the second, and so forth.  This texture index will only be used for pixels that are shaded but not covered by the pencil.  For pixels that are covered by the pencil, the second texture will always be selected, and the texture index in the shading record will be ignored.
 
 The shading rate and drawing rate are both unsigned integers in range zero to 255, with zero meaning a complete transparency and 255 meaning a completely opacity.  The alpha channel value of the pixel from the texture is combined with the shading or drawing rate to form the shaded RGB value.  If the pixel is covered by the pencil, the drawing rate is used and the texture is always the second texture.  If the pixel is not covered by the pencil, the shading rate is used and the texture is the one selected by the texture index in this record.  This shaded RGB value is then composited over the background paper texture (always the first texture), and the result of this is then composited over fully opaque white.  Finally, the RGB result is then run through the colorizer (see earlier) before it is sent to output.
@@ -94,6 +96,8 @@ The fourth stage in the image processing pipeline is to composite the ARGB value
 The fifth stage in the image processing pipeline is to composite the ARGB value from the previous stage over an ARGB value of fully opaque white.  This is used to make sure the alpha channel value is fully opaque, so the output of this pipeline stage is just an RGB value rather than an ARGB value.
 
 The sixth and final stage in the image processing pipeline is to pass the RGB value from the previous stage through the colorizer.  The colorizer converts the input RGB value to grayscale.  It also converts the RGB tint value from the shading record into an HSL color.  The L channel value in the HSL color is replaced by grayscale value derived from the input RGB value, and this adjusted HSL color is then converted back to RGB and sent to output with the alpha channel fully opaque.
+
+The sixth stage is skipped if the tint has the special value FFFFFF.  In this case, the output from the fifth stage goes directly to the rendered output.
 
 ## 4. Compilation
 
