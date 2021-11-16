@@ -20,6 +20,13 @@
 #define PSHADE_ERR_LOADSC (2)   /* Failed to load script */
 #define PSHADE_ERR_INITSC (3)   /* Failed to initialize script */
 #define PSHADE_ERR_GROWST (4)   /* Failed to grow stack */
+#define PSHADE_ERR_UNLOAD (5)   /* Lua interpreter not loaded */
+#define PSHADE_ERR_NOTFND (6)   /* Shader function not found */
+#define PSHADE_ERR_SMALLI (7)   /* Integers are too small */
+#define PSHADE_ERR_CALL   (8)   /* Calling shader function failed */
+#define PSHADE_ERR_RETVAL (9)   /* Shader didn't return one value */
+#define PSHADE_ERR_RTYPE  (10)  /* Shader returned non-integer */
+#define PSHADE_ERR_RRANGE (11)  /* Shader return value out of range */
 
 /*
  * Given a programmable shader error code, return an error message.
