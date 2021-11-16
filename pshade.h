@@ -15,7 +15,11 @@
  * 
  * Don't forget to update pshade_errorString()!
  */
-#define PSHADE_ERR_NONE (0)   /* No error */
+#define PSHADE_ERR_NONE   (0)   /* No error */
+#define PSHADE_ERR_LALLOC (1)   /* Failed to allocate Lua interpreter */
+#define PSHADE_ERR_LOADSC (2)   /* Failed to load script */
+#define PSHADE_ERR_INITSC (3)   /* Failed to initialize script */
+#define PSHADE_ERR_GROWST (4)   /* Failed to grow stack */
 
 /*
  * Given a programmable shader error code, return an error message.
@@ -46,6 +50,8 @@ const char *pshade_errorString(int code);
  * PSHADE_ERR_.  Use pshade_errorString() to convert an error code into
  * an error message.  PSHADE_ERR_NONE is returned when successful.
  * 
+ * You should eventually call pshade_close() to close down.
+ * 
  * Parameters:
  * 
  *   pScriptPath - path to the Lua script to load
@@ -57,6 +63,11 @@ const char *pshade_errorString(int code);
  *   non-zero if successful, zero if error
  */
 int pshade_load(const char *pScriptPath, int *perr);
+
+/*
+ * Close down any Lua interpreter instance that might be open.
+ */
+void pshade_close(void);
 
 /*
  * Use the programmable shader module to query a specific pixel in a
