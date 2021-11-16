@@ -18,9 +18,11 @@
 #include <time.h>
 
 #include "gamma.h"
-#include "sophistry.h"
+#include "pshade.h"
 #include "texture.h"
 #include "ttable.h"
+
+#include "sophistry.h"
 
 /*
  * Constants
@@ -53,6 +55,7 @@
  */
 #define VTEX_UNDEF  (0)
 #define VTEX_PNG    (1)
+#define VTEX_PSHADE (2)
 
 /*
  * The maximum number of characters, including the opening dot and the
@@ -129,6 +132,12 @@ typedef struct {
      * directly to the texture module.
      */
     int tidx;
+    
+    /*
+     * Pointer to a nul-terminated shader name string for use with
+     * programmable shaders.
+     */
+    char *pShader;
     
   } v;
   
@@ -255,6 +264,7 @@ static int vtx_load(const char *pstr) {
   const char *pExt = NULL;
   const char *pc = NULL;
   char *pb = NULL;
+  size_t slen = 0;
   
   char ext[MAX_EXT];
   
@@ -342,6 +352,41 @@ static int vtx_load(const char *pstr) {
       m_vtx_count++;
     }
     
+  } else if (status && (strcmp(ext, "-") == 0)) {
+    /* No file extension, so this is a shader name token to use with a
+     * programmable shader -- first check that the shader name uses only
+     * ASCII alphanumerics and underscores (empty shader names OK) */
+    for(pc = pstr; *pc != 0; pc++) {
+      if (((*pc < 'A') || (*pc > 'Z')) &&
+            ((*pc < 'a') || (*pc > 'z')) &&
+            ((*pc < '0') || (*pc > '9')) &&
+            (*pc != '_')) {
+        status = 0;
+        fprintf(stderr, "%s: Shader name '%s' is invalid!\n",
+          pModule, pstr);
+        break;
+      }
+    }
+    
+    /* Next make a dynamic copy of the shader name */
+    if (status) {
+      slen = strlen(pstr);
+      pb = (char *) malloc(slen + 1);
+      if (pb == NULL) {
+        abort();
+      }
+      memset(pb, 0, slen + 1);
+      strcpy(pb, pstr);
+    }
+    
+    /* Add the procedural texture to the virtual texture table */
+    if (status) {
+      m_vtx[m_vtx_count].vtype = VTEX_PSHADE;
+      m_vtx[m_vtx_count].v.pShader = pb;
+      m_vtx_count++;
+      pb = NULL;
+    }
+    
   } else if (status) {
     /* Unrecognized extension */
     status = 0;
@@ -381,6 +426,8 @@ static int vtx_load(const char *pstr) {
  * return value will be zero.  But note that a return value of zero also
  * can be the result of a successful query!
  * 
+ * Failures will be reported to standard error by this function.
+ * 
  * Parameters:
  * 
  *   tidx - the virtual texture to query
@@ -408,6 +455,7 @@ uint32_t vtx_query(
     int     * status) {
   
   uint32_t result = 0;
+  int errcode = 0;
   
   static int32_t s_last_x = 0;
   static int32_t s_last_y = 0;
@@ -457,6 +505,23 @@ uint32_t vtx_query(
     if (m_vtx[tidx - 1].vtype == VTEX_PNG) {
       /* PNG texture, so dispatch to texture module */
       result = texture_pixel(m_vtx[tidx - 1].v.tidx, x, y);
+      
+    } else if (m_vtx[tidx - 1].vtype == VTEX_PSHADE) {
+      /* Procedural texture, so dispatch to programmable shader
+       * module */
+      result = pshade_pixel(
+                m_vtx[tidx - 1].v.pShader,
+                x, y, width, height,
+                &errcode);
+      
+      /* Check for error */
+      if (errcode != PSHADE_ERR_NONE) {
+        *status = 0;
+        fprintf(stderr, "%s: Programmable shader error...\n",
+                  pModule);
+        fprintf(stderr, "%s: %s!\n",
+          pModule, pshade_errorString(errcode));
+      }
       
     } else {
       /* Shouldn't happen -- unknown virtual texture type or
@@ -1455,9 +1520,9 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  /* In addition to the module name, we must have at least seven
+  /* In addition to the module name, we must have at least eight
    * additional parameters */
-  if (argc < 8) {
+  if (argc < 9) {
     fprintf(stderr, "%s: Not enough parameters!\n", pModule);
     status = 0;
   }
@@ -1465,17 +1530,31 @@ int main(int argc, char *argv[]) {
   /* The number of textures passed may not exceed the maximum number of
    * textures */
   if (status) {
-    if (argc - 6 > TEXTURE_MAXCOUNT) {
+    if (argc - 7 > TEXTURE_MAXCOUNT) {
       fprintf(stderr, "%s: Too many textures!\n", pModule);
       status = 0;
     }
   }
   
-  /* Starting at parameter index six and proceeding through the
+  /* Use parameter index six to initialize the programmable shader
+   * module, unless it has the special value "-" */
+  if (status) {
+    if (strcmp(argv[6], "-") != 0) {
+      if (!pshade_load(argv[6], &errcode)) {
+        status = 0;
+        fprintf(stderr, "%s: Error loading programmable shader...\n",
+          pModule);
+        fprintf(stderr, "%s: %s!\n",
+          pModule, pshade_errorString(errcode));
+      }
+    }
+  }
+  
+  /* Starting at parameter index seven and proceeding through the
    * remaining parameters, load each path in the virtual texture
    * table */
   if (status) {
-    for(i = 6; i < argc; i++) {
+    for(i = 7; i < argc; i++) {
       if (!vtx_load(argv[i])) {
         status = 0;
         break;
