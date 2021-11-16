@@ -55,7 +55,7 @@ The tint is the RGB color used for colorization.  Colorization is the last step 
 
 In short, the colorizer combines the brightness of the input RGB value with the color of the tint to form the output value.
 
-To disable the colorizer, set a tint value of FFFFFF.  In this case, no colorization step will be performed.  If no tint value is provided, the special value of FFFFFF is assumed, which will disable the colorizer.
+To disable the colorizer, omit the tint value.  In this case, no colorization step will be performed.
 
 The texture index is an unsigned integer that selects one of the texture files that was passed to the Lilac program.  A value of one selects the first texture file, two selects the second, and so forth.  This texture index will only be used for pixels that are shaded but not covered by the pencil.  For pixels that are covered by the pencil, the second texture will always be selected, and the texture index in the shading record will be ignored.
 
@@ -99,7 +99,7 @@ The fifth stage in the image processing pipeline is to composite the ARGB value 
 
 The sixth and final stage in the image processing pipeline is to pass the RGB value from the previous stage through the colorizer.  The colorizer converts the input RGB value to grayscale.  It also converts the RGB tint value from the shading record into an HSL color.  The L channel value in the HSL color is replaced by grayscale value derived from the input RGB value, and this adjusted HSL color is then converted back to RGB and sent to output with the alpha channel fully opaque.
 
-The sixth stage is skipped if the tint has the special value FFFFFF.  In this case, the output from the fifth stage goes directly to the rendered output.
+The sixth stage is skipped if no tint value was provided in the shading record.  In this case, the output from the fifth stage goes directly to the rendered output.
 
 ## 4. Compilation
 
