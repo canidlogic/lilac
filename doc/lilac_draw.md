@@ -20,9 +20,9 @@ The `[shading]` parameter is the path to an image file to read as the shading fi
 
 The `[table]` parameter is the path to a text file specifying shading information.  The format of this file is described in section 2.1 "Table file syntax".
 
-The `[pshade]` parameter is the path to a Lua script that will serve as the programmable shader.  Use a hyphen `-` if there is no programmable shader script to load.
+The `[pshade]` parameter is the path to a Lua script that will serve as the programmable shader.  Use a hyphen `-` if there is no programmable shader script to load.  See section 4 for how to use the programmable shaders.
 
-The `[texture_1]` ... `[texture_n]` is an array of parameters specifying paths to image files to read as texture files.  Each path must have a PNG image format extension.  There must be at least two textures.  The first texture is always the background (paper) texture, and the second texture is always the pencil texture.
+The `[texture_1]` ... `[texture_n]` is an array of parameters specifying the textures.  They must either be paths to image files to read as texture files, in which case each path must have a PNG image format extension; or, they must be the name of a function within the Lua script to call for a procedural texture.  There must be at least two textures.  The first texture is always the background (paper) texture, and the second texture is always the pencil texture.
 
 ### 2.1 Table file syntax
 
@@ -101,6 +101,32 @@ The sixth and final stage in the image processing pipeline is to pass the RGB va
 
 The sixth stage is skipped if no tint value was provided in the shading record.  In this case, the output from the fifth stage goes directly to the rendered output.
 
-## 4. Compilation
+## 4. Programmable shader
+
+You can use programmable shaders for procedural textures.  PNG file textures must be fully loaded into memory, so there are memory limits to how large they are.  Procedural textures, on the other hand, generate pixels only as needed, and they can easily cover the whole output area without any memory problems.
+
+To use programmable shaders, each procedural texture should be a function within the Lua script that is passed as a programmable shader to Lilac on the command line.  Then, use the name of the function in the parameter list of textures.  Function names may only contain ASCII alphanumeric characters and underscores.
+
+A simple procedural texture looks like this in Lua:
+
+    function sparkle(x, y, w, h)
+  
+      local h_f = x / w
+      local v_f = y / h
+      
+      local red = math.floor(255 * h_f)
+      local blue = math.floor(255 * v_f)
+      
+      local result = (red << 16) | blue
+      result = 0xff000000 | result
+      
+      return result
+    end
+
+Procedural texture functions take four parameters, which define the (x, y) coordinates of the pixel that is requested, the width of the output area, and the height of the output area.  The return value must be an integer that is a packed 32-bit ARGB value with the alpha channel premultiplied and in the most significant bits.
+
+Lilac always renders pixels first within scanlines from left to right, and then scanline by scanline moving top to bottom.  Procedural texture shaders may therefore assume this ordering.
+
+## 5. Compilation
 
 For build information, see the README file in the `cli` directory.
