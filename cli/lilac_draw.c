@@ -1597,6 +1597,9 @@ int main(int argc, char *argv[]) {
     }
   }
   
+  /* Close down Lua interpreter if open */
+  pshade_close();
+  
   /* Invert status and return */
   if (status) {
     status = 0;
