@@ -1,9 +1,10 @@
 /*
- * lilac.c
+ * lilac_draw.c
  * 
- * Main program module for lilac.
+ * Lilac drawing program.
  * 
- * See readme file for more information about this program.
+ * See the manual in the doc directory for user instructions and the
+ * README in this directory for build instructions.
  */
 
 #include <assert.h>
@@ -1024,7 +1025,7 @@ int main(int argc, char *argv[]) {
     }
   }
   if (pModule == NULL) {
-    pModule = "lilac";
+    pModule = "lilac_draw";
   }
  
   /* Check parameters */
