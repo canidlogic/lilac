@@ -43,9 +43,9 @@ All other lines are shading records, which must have the following format:
 5. Shading rate
 6. _whitespace_
 7. Drawing rate
-8. _whitespace_
-9. RGB tint
-10. _optional whitespace_
+8. _whitespace (optional unless RGB tint present)_
+9. RGB tint _(optional)_
+10. _whitespace (optional)_
 
 The _whitespace_ entries mean at least one space or tab character, while the _optional whitespace_ entry means zero or more space or tab characters.  Note that no whitespace is allowed at the beginning of the line.
 
@@ -55,7 +55,7 @@ The tint is the RGB color used for colorization.  Colorization is the last step 
 
 In short, the colorizer combines the brightness of the input RGB value with the color of the tint to form the output value.
 
-To disable the colorizer, set a tint value of FFFFFF.  In this case, no colorization step will be performed.
+To disable the colorizer, set a tint value of FFFFFF.  In this case, no colorization step will be performed.  If no tint value is provided, the special value of FFFFFF is assumed, which will disable the colorizer.
 
 The texture index is an unsigned integer that selects one of the texture files that was passed to the Lilac program.  A value of one selects the first texture file, two selects the second, and so forth.  This texture index will only be used for pixels that are shaded but not covered by the pencil.  For pixels that are covered by the pencil, the second texture will always be selected, and the texture index in the shading record will be ignored.
 
