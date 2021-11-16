@@ -7,8 +7,34 @@
  */
 #include "pshade.h"
 
-/* @@TODO: */
-#include <stdio.h>
+/* Lua headers */
+#include <lua.h>
+#include <lauxlib.h>
+#include <stdlib.h>
+
+/*
+ * Constants
+ * =========
+ */
+
+/*
+ * Number of entries required on the Lua interpreter stack.
+ * 
+ * We need space for a function object, four parameters, and one return
+ * value.
+ */
+#define PSHADE_LSTACK_HEIGHT (6)
+
+/*
+ * Local data
+ * ==========
+ */
+
+/*
+ * Pointer to the Lua interpreter state object, or NULL if not
+ * initialized yet.
+ */
+static lua_State *m_L = NULL;
 
 /*
  * Public function implementations
@@ -29,6 +55,22 @@ const char *pshade_errorString(int code) {
       pResult = "No error";
       break;
     
+    case PSHADE_ERR_LALLOC:
+      pResult = "Failed to allocate Lua interpreter";
+      break;
+    
+    case PSHADE_ERR_LOADSC:
+      pResult = "Failed to load Lua script";
+      break;
+    
+    case PSHADE_ERR_INITSC:
+      pResult = "Failed to run initialization of Lua script";
+      break;
+    
+    case PSHADE_ERR_GROWST:
+      pResult = "Failed to grow Lua interpreter stack";
+      break;
+    
     default:
       pResult = "Unknown error";
   }
@@ -40,9 +82,75 @@ const char *pshade_errorString(int code) {
  * pshade_load function.
  */
 int pshade_load(const char *pScriptPath, int *perr) {
-  /* @@TODO: */
-  fprintf(stderr, "pshade_load %s\n", pScriptPath);
-  return 1;
+  
+  int status = 1;
+  
+  /* Check state */
+  if (m_L != NULL) {
+    abort();
+  }
+  
+  /* Check parameters */
+  if ((pScriptPath == NULL) || (perr == NULL)) {
+    abort();
+  }
+  
+  /* Reset error indicator */
+  *perr = PSHADE_ERR_NONE;
+  
+  /* Allocate new Lua state */
+  m_L = luaL_newstate();
+  if (m_L == NULL) {
+    status = 0;
+    *perr = PSHADE_ERR_LALLOC;
+  }
+  
+  /* Load the script file */
+  if (status) {
+    if (luaL_loadfile(m_L, pScriptPath)) {
+      status = 0;
+      *perr = PSHADE_ERR_LOADSC;
+    }
+  }
+  
+  /* The compiled script file is now a function object on top of the Lua
+   * stack; invoke it so all functions are registered and any startup
+   * code is run */
+  if (status) {
+    if (lua_pcall(m_L, 0, 0, 0)) {
+      status = 0;
+      *perr = PSHADE_ERR_INITSC;
+    }
+  }
+  
+  /* Make sure we have enough room on the Lua stack */
+  if (status) {
+    if (!lua_checkstack(m_L, PSHADE_LSTACK_HEIGHT)) {
+      status = 0;
+      *perr = PSHADE_ERR_GROWST;
+    }
+  }
+  
+  /* If there was an error, free the Lua state if allocated */
+  if (!status) {
+    if (m_L != NULL) {
+      lua_close(m_L);
+      m_L = NULL;
+    }
+  }
+  
+  /* Return status */
+  return status;
+}
+
+/*
+ * pshade_close function.
+ */
+void pshade_close(void) {
+  if (m_L != NULL) {
+    lua_close(m_L);
+    m_L = NULL;
+  }
 }
 
 /*
