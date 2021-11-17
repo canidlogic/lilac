@@ -9,12 +9,14 @@ The `lilac_draw` program simulates a color drawing by synthesizing an image out 
 This program requires the following modules of Lilac:
 
 - `gamma.c`
+- `pshade.c`
 - `texture.c`
 - `ttable.c`
 
 This program has the following direct external dependencies:
 
 - [libsophistry](http://www.purl.org/canidtech/r/libsophistry) version 0.5.2 or 0.5.3 or compatible.
+- [liblua](https://www.lua.org/) version 5.4
 
 This program has the following indirect external dependencies:
 
@@ -23,19 +25,26 @@ This program has the following indirect external dependencies:
 
 The math library `-lm` may be required on certain platforms.
 
+The dynamic loader library `-ldl` may be required on certain platforms.  This is required by Lua for loading the Lua standard libraries.
+
 If you are in the root directory of this project, you can build the program with the following GCC invocation (all on one line):
 
     gcc -O2 -o cli/lilac_draw
       -I.
       -I/path/to/sophistry/include
+      -I/path/to/liblua/include
       -L/path/to/sophistry/lib
+      -L/path/to/liblua/lib
       `pkg-config --cflags libpng`
       cli/lilac_draw.c
       gamma.c
+      pshade.c
       texture.c
       ttable.c
       -lm
+      -ldl
       -lsophistry
+      -llua
       `pkg-config --libs libpng`
 
 ## lilacme2json

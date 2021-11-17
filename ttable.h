@@ -111,6 +111,10 @@ const char *ttable_errorString(int code);
  * number in case of error.  The line number is set to -1 if not
  * relevant or if overflow.
  * 
+ * tcount is the total number of virtual textures that have been
+ * defined.  This is used for checking the ranges of texture indices
+ * within the table.
+ * 
  * The return value indicates whether the file was completely parsed or
  * not.  If the file was not completely parsed, some records may have
  * been added.
@@ -126,11 +130,18 @@ const char *ttable_errorString(int code);
  * 
  *   pLineNum - pointer to line number location or NULL
  * 
+ *   tcount - the total number of virtual textures that have been
+ *   defined
+ * 
  * Return:
  * 
  *   non-zero if successful, zero if error
  */
-int ttable_parse(const char *pPath, int *pError, int *pLineNum);
+int ttable_parse(
+    const char * pPath,
+          int  * pError,
+          int  * pLineNum,
+          int    tcount);
 
 /*
  * Fill in a shading record from the table.

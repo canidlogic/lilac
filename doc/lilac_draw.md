@@ -8,7 +8,7 @@
 
 The syntax of the Lilac drawing program is:
 
-    lilac_draw [out] [mask] [pencil] [shading] [table] [texture_1] ... [texture_n]
+    lilac_draw [out] [mask] [pencil] [shading] [table] [pshade] [texture_1] ... [texture_n]
 
 The `[out]` parameter is the path to write the output image file.  The path must have a PNG format extension.
 
@@ -20,7 +20,15 @@ The `[shading]` parameter is the path to an image file to read as the shading fi
 
 The `[table]` parameter is the path to a text file specifying shading information.  The format of this file is described in section 2.1 "Table file syntax".
 
-The `[texture_1]` ... `[texture_n]` is an array of parameters specifying paths to image files to read as texture files.  Each path must have a PNG image format extension.  There must be at least two textures.  The first texture is always the background (paper) texture, and the second texture is always the pencil texture.
+The `[pshade]` parameter is the path to a Lua script that will serve as the programmable shader.  Use a hyphen `-` if there is no programmable shader script to load.  See section 4 for how to use the programmable shaders.
+
+The `[texture_1]` ... `[texture_n]` is an array of parameters specifying the textures.  They must either be paths to image files to read as texture files, or they must be the names of procedural texture functions in the programmable shader script.  There must be at least two textures.  The first texture is always the background (paper) texture, and the second texture is always the pencil texture.
+
+For textures that are paths to image files, each such image path must end in a case-insensitive match for `.png` and be a PNG image file.
+
+For textures that are procedural function calls, the name of the procedure must be a sequence of one or more ASCII alphanumerics and underscores followed by `()` and match the name of a function defined in the Lua script.
+
+__Important:__ since the procedural texture names include parentheses, you may need to enclose these parameters in quotation marks to prevent the shell from intepreting the characters.
 
 ### 2.1 Table file syntax
 
@@ -41,9 +49,9 @@ All other lines are shading records, which must have the following format:
 5. Shading rate
 6. _whitespace_
 7. Drawing rate
-8. _whitespace_
-9. RGB tint
-10. _optional whitespace_
+8. _whitespace (optional unless RGB tint present)_
+9. RGB tint _(optional)_
+10. _whitespace (optional)_
 
 The _whitespace_ entries mean at least one space or tab character, while the _optional whitespace_ entry means zero or more space or tab characters.  Note that no whitespace is allowed at the beginning of the line.
 
@@ -52,6 +60,8 @@ The two RGB fields are specified as exactly six base-16 digits (uppercase or low
 The tint is the RGB color used for colorization.  Colorization is the last step in rendering before a pixel is output.  During colorization, the input RGB value is first converted to a grayscale value, keeping the brightness but discarding the color.  If the tint value is grayscale (RGB channels have equal values), then the output RGB from the colorizer is the grayscale conversion of the input RGB value.  If the tint value is not grayscale, then the tint is converted into HSL, the L channel is replaced with the input grayscale value, and the adjusted HSL value is then converted back to RGB for the final output value.  If the input grayscale value is pure white, then the output of the colorizer will always be pure white.  If the input grayscale value is pure black, then the output of the colorizer will always be pure black.
 
 In short, the colorizer combines the brightness of the input RGB value with the color of the tint to form the output value.
+
+To disable the colorizer, omit the tint value.  In this case, no colorization step will be performed.
 
 The texture index is an unsigned integer that selects one of the texture files that was passed to the Lilac program.  A value of one selects the first texture file, two selects the second, and so forth.  This texture index will only be used for pixels that are shaded but not covered by the pencil.  For pixels that are covered by the pencil, the second texture will always be selected, and the texture index in the shading record will be ignored.
 
@@ -95,6 +105,34 @@ The fifth stage in the image processing pipeline is to composite the ARGB value 
 
 The sixth and final stage in the image processing pipeline is to pass the RGB value from the previous stage through the colorizer.  The colorizer converts the input RGB value to grayscale.  It also converts the RGB tint value from the shading record into an HSL color.  The L channel value in the HSL color is replaced by grayscale value derived from the input RGB value, and this adjusted HSL color is then converted back to RGB and sent to output with the alpha channel fully opaque.
 
-## 4. Compilation
+The sixth stage is skipped if no tint value was provided in the shading record.  In this case, the output from the fifth stage goes directly to the rendered output.
+
+## 4. Programmable shader
+
+You can use programmable shaders for procedural textures.  PNG file textures must be fully loaded into memory, so there are memory limits to how large they are.  Procedural textures, on the other hand, generate pixels only as needed, and they can easily cover the whole output area without any memory problems.
+
+To use programmable shaders, each procedural texture should be a function within the Lua script that is passed as a programmable shader to Lilac on the command line.  Then, use the name of the function in the parameter list of textures, with `()` suffixed to the function name, and enclose the whole parameter in quotation marks so the shell won't try to interpret the parentheses.  Function names may only contain ASCII alphanumeric characters and underscores.
+
+A simple procedural texture looks like this in Lua:
+
+    function sparkle(x, y, w, h)
+  
+      local h_f = x / w
+      local v_f = y / h
+      
+      local red = math.floor(255 * h_f)
+      local blue = math.floor(255 * v_f)
+      
+      local result = (red << 16) | blue
+      result = 0xff000000 | result
+      
+      return result
+    end
+
+Procedural texture functions take four parameters, which define the (x, y) coordinates of the pixel that is requested, the width of the output area, and the height of the output area.  The return value must be an integer that is a packed 32-bit ARGB value with the alpha channel premultiplied and in the most significant bits.
+
+Lilac always renders pixels first within scanlines from left to right, and then scanline by scanline moving top to bottom.  Procedural texture shaders may therefore assume this ordering.
+
+## 5. Compilation
 
 For build information, see the README file in the `cli` directory.

@@ -1,5 +1,6 @@
 /*
  * lilac_draw.c
+ * ============
  * 
  * Lilac drawing program.
  * 
@@ -14,18 +15,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "gamma.h"
-#include "sophistry.h"
+#include "pshade.h"
 #include "texture.h"
 #include "ttable.h"
 
+#include "sophistry.h"
+
 /*
- * The Sophistry output encoding quality value.
- * 
- * This is only used with JPEG output, which is not recommended.
+ * Constants
+ * =========
  */
-#define OUT_QUALITY (90)
 
 /*
  * Error code definitions.
@@ -47,6 +49,24 @@
 #define ERRORLOC_MASKFILE     (2)
 #define ERRORLOC_PENCILFILE   (3)
 #define ERRORLOC_SHADINGFILE  (4)
+
+/*
+ * Virtual texture types.
+ */
+#define VTEX_UNDEF  (0)
+#define VTEX_PNG    (1)
+#define VTEX_PSHADE (2)
+
+/*
+ * The maximum number of characters, including the opening dot and the
+ * terminating nul, that may be in a texture file extension.
+ */
+#define MAX_EXT (16)
+
+/*
+ * Type declarations
+ * =================
+ */
 
 /*
  * Stores an HSL color with floating-point channels.
@@ -83,7 +103,100 @@ typedef struct {
   
 } RGB;
 
+/*
+ * Virtual texture structure.
+ */
+typedef struct {
+  
+  /*
+   * The type of virtual texture.
+   * 
+   * One of the VTEX_ constants.
+   */
+  int vtype;
+  
+  /*
+   * The actual texture data depends on which virtual texture type.
+   */
+  union {
+    
+    /*
+     * Dummy value used for VTEX_UNDEF.
+     */
+    int dummy;
+    
+    /*
+     * Texture index in texture module, used for PNG textures.
+     * 
+     * This is the one-indexed textured index so it can be passed
+     * directly to the texture module.
+     */
+    int tidx;
+    
+    /*
+     * Pointer to a nul-terminated shader name string for use with
+     * programmable shaders.
+     */
+    char *pShader;
+    
+  } v;
+  
+} VTEX;
+
+/*
+ * Local data
+ * ==========
+ */
+
+/*
+ * The executable module name, for use in diagnostic reports.
+ * 
+ * This is set at the start of the program entrypoint.
+ */
+const char *pModule = NULL;
+
+/*
+ * The virtual texture table.
+ * 
+ * m_vtx_init indicates whether the virtual texture table has been
+ * initialized yet.
+ * 
+ * m_vtx_count starts at zero and then is incremented for each new
+ * virtual texture that is added.  All textures with an index in the
+ * array that is less than m_vtx_count must have a type other than
+ * VTEX_UNDEF.
+ * 
+ * Use vtx_init() to clear and initialize the virtual texture table if
+ * not already initialized, with a count of zero and with all textures
+ * being the "undefined" texture type.  vtx_init() is called
+ * automatically at the start of the other vtx functions.
+ * 
+ * Use vtx_load() to load a texture in the virtual texture table.
+ * 
+ * Use vtx_query() to query a pixel from a texture, routing the call
+ * appropriately to the correct texture handling module depending on the
+ * texture type.
+ */
+static int m_vtx_init = 0;
+static int m_vtx_count = 0;
+static VTEX m_vtx[TEXTURE_MAXCOUNT];
+
+/*
+ * Local functions
+ * ===============
+ */
+
 /* Function prototypes */
+static void vtx_init(void);
+static int vtx_load(const char *pstr);
+uint32_t vtx_query(
+    int       tidx,
+    int32_t   x,
+    int32_t   y,
+    int32_t   width,
+    int32_t   height,
+    int     * status);
+
 static const char *lilac_errorString(int code);
 
 static float hslval(float a, float b, float hue);
@@ -100,6 +213,377 @@ static int lilac(
     const char * pShadingPath,
            int * pError,
            int * pErrLoc);
+
+/*
+ * Initialize the virtual texture table, if not already initialized.
+ * 
+ * If the virtual texture table is already initialized, this does
+ * nothing.
+ */
+static void vtx_init(void) {
+  int i = 0;
+  
+  /* Only proceed if not initialized */
+  if (!m_vtx_init) {
+    
+    /* Initialize virtual texture table */
+    memset(m_vtx, 0, sizeof(VTEX) * TEXTURE_MAXCOUNT);
+    for(i = 0; i < TEXTURE_MAXCOUNT; i++) {
+      m_vtx[i].vtype = VTEX_UNDEF;
+      m_vtx[i].v.dummy = 0;
+    }
+    m_vtx_count = 0;
+    m_vtx_init = 1;
+  }
+}
+
+/*
+ * Load a virtual texture from a given command-line parameter value.
+ * 
+ * vtx_init() is called at the start of this function to automatically
+ * initialize the virtual texture table if not yet initialized.
+ * 
+ * This function will handle reporting errors to stderr.  The return
+ * value indicates whether the load was successful or not.
+ * 
+ * If successful, the texture will be added to the virtual texture
+ * table.
+ * 
+ * Parameters:
+ * 
+ *   pstr - the parameter to parse
+ * 
+ * Return:
+ * 
+ *   non-zero if successful, zero if failure
+ */
+static int vtx_load(const char *pstr) {
+  
+  int status = 1;
+  int errcode = 0;
+  const char *pExt = NULL;
+  const char *pc = NULL;
+  char *pb = NULL;
+  size_t slen = 0;
+  
+  char ext[MAX_EXT];
+  
+  /* Initialize buffer */
+  memset(ext, 0, MAX_EXT);
+  
+  /* Initialize virtual texture table if necessary */
+  vtx_init();
+  
+  /* Check parameter */
+  if (pstr == NULL) {
+    abort();
+  }
+  
+  /* Set pExt to point to the last dot in the string, or set it to NULL
+   * if there is no dot in the string */
+  pExt = NULL;
+  for(pc = pstr; *pc != 0; pc++) {
+    if (*pc == '.') {
+      pExt = pc;
+    }
+  }
+  
+  /* If pExt is NULL, then set the ext buffer to the special value "-";
+   * else, check that the extension fits together with the opening dot
+   * and copy it into the ext buffer */
+  if (pExt == NULL) {
+    /* No extension, so copy "-" into buffer */
+    strcpy(ext, "-");
+    
+  } else {
+    /* Extension -- first make sure that extension is not too long */
+    if (strlen(pExt) < MAX_EXT) {
+      /* Extension fits in buffer, so copy it in */
+      strcpy(ext, pExt);
+      
+    } else {
+      /* Extension doesn't fit in buffer, so can't be recognized */
+      status = 0;
+      fprintf(stderr,
+        "%s: Texture '%s' doesn't have recognized file extension!\n",
+        pModule, pstr);
+    }
+  }
+  
+  /* Extensions are case-insensitive, so convert uppercase letters in
+   * extension to lowercase letters */
+  if (status) {
+    for(pb = ext; *pb != 0; pb++) {
+      if ((*pb >= 'A') && (*pb <= 'Z')) {
+        *pb = *pb + ('a' - 'A');
+      }
+    }
+  }
+  
+  /* Make sure virtual texture table isn't full */
+  if (status && (m_vtx_count >= TEXTURE_MAXCOUNT)) {
+    status = 0;
+    fprintf(stderr, "%s: Too many textures defined!\n", pModule);
+  }
+  
+  /* Now handle the specific extension ("-" is used if there is no
+   * extension) */
+  if (status && (strcmp(ext, ".png") == 0)) {
+    /* PNG image file, so load with the texture module */
+    if (!texture_load(pstr, &errcode)) {
+      fprintf(stderr, "%s: Error loading texture '%s'...\n",
+                pModule, pstr);
+      
+      if (errcode == SPH_IMAGE_ERR_IMAGEDIM) {
+        fprintf(stderr, "%s: Texture dimensions too large!\n",
+                  pModule);
+      } else {
+        fprintf(stderr, "%s: %s!\n",
+                  pModule,
+                  sph_image_errorString(errcode));
+      }
+      status = 0;
+    }
+    
+    /* Add the PNG texture to the virtual texture table */
+    if (status) {
+      m_vtx[m_vtx_count].vtype = VTEX_PNG;
+      m_vtx[m_vtx_count].v.tidx = texture_count();
+      m_vtx_count++;
+    }
+    
+  } else if (status && (strcmp(ext, "-") == 0)) {
+    /* No file extension, so this should be a shader name token to use
+     * with a programmable shader -- first, check that the shader name
+     * uses only ASCII alphanumerics and underscores and parentheses,
+     * that it has at least one character, that the first character is
+     * not a digit, and that parentheses are only used in last two
+     * characters */
+    if (status) {
+      if ((*pstr == 0) || ((*pstr >= '0') && (*pstr <= '9'))) {
+        status = 0;
+        fprintf(stderr, "%s: Shader name '%s' is invalid!\n",
+          pModule, pstr);
+      }
+    }
+    
+    if (status) {
+      for(pc = pstr; *pc != 0; pc++) {
+        if (((*pc < 'A') || (*pc > 'Z')) &&
+              ((*pc < 'a') || (*pc > 'z')) &&
+              ((*pc < '0') || (*pc > '9')) &&
+              (*pc != '_') && (*pc != '(') && (*pc != ')')) {
+          status = 0;
+          fprintf(stderr, "%s: Shader name '%s' is invalid!\n",
+            pModule, pstr);
+          break;
+        }
+        if ((*pc == '(') || (*pc == ')')) {
+          if ((pc[1] != 0) && (pc[2] != 0)) {
+            status = 0;
+            fprintf(stderr, "%s: Shader name '%s' is invalid!\n",
+              pModule, pstr);
+            break;
+          }
+        }
+      }
+    }
+    
+    /* Second, get the length of the shader name in slen, make sure it
+     * is at least three characters, and make sure that the last two
+     * characters are () */
+    if (status) {
+      slen = strlen(pstr);
+      if (slen >= 3) {
+        if ((pstr[slen - 2] != '(') || (pstr[slen - 1] != ')')) {
+          status = 0;
+          fprintf(stderr,
+            "%s: Shader name '%s' is missing () at end!\n",
+            pModule, pstr);
+        }
+        
+      } else {
+        status = 0;
+        fprintf(stderr, "%s: Shader name '%s' is missing () at end!\n",
+          pModule, pstr);
+      }
+    }
+    
+    /* Third, drop the last two () characters from the length so the
+     * copy will not include those characters */
+    if (status) {
+      slen -= 2;
+    }
+    
+    /* Next make a dynamic copy of the shader name, without the
+     * trailing () */
+    if (status) {
+      pb = (char *) malloc(slen + 1);
+      if (pb == NULL) {
+        abort();
+      }
+      memset(pb, 0, slen + 1);
+      memcpy(pb, pstr, slen);
+    }
+    
+    /* Add the procedural texture to the virtual texture table */
+    if (status) {
+      m_vtx[m_vtx_count].vtype = VTEX_PSHADE;
+      m_vtx[m_vtx_count].v.pShader = pb;
+      m_vtx_count++;
+      pb = NULL;
+    }
+    
+  } else if (status) {
+    /* Unrecognized extension */
+    status = 0;
+    fprintf(stderr,
+      "%s: Texture '%s' doesn't have recognized file extension!\n",
+      pModule, pstr);
+  }
+  
+  /* Return status */
+  return status;
+}
+
+/*
+ * Get the ARGB pixel value of a given virtual texture at a given
+ * coordinate.
+ * 
+ * This function will automatically initialize the virtual texture table
+ * if necessary with vtx_init().
+ * 
+ * tidx is the texture index.  It must be in range one up to and
+ * including m_vtx_count or a fault occurs.  Note that the indices given
+ * to this function are one-indexed!
+ * 
+ * x and y are the image coordinates.  This function enforces that
+ * pixels may only be queries in order left-to-right through scanlines,
+ * and scanlines from top to bottom through image.
+ * 
+ * width and height are the width and height in pixels of the output
+ * image that is being rendered.  x and y must both be greater than or
+ * equal to zero and less than width and height, respectively.
+ * 
+ * The return value is packed ARGB value in the same format as Sophistry
+ * uses.
+ * 
+ * If the query is successful, *status will be unchanged by this
+ * function.  If the query fails, *status will be set to zero and the
+ * return value will be zero.  But note that a return value of zero also
+ * can be the result of a successful query!
+ * 
+ * Failures will be reported to standard error by this function.
+ * 
+ * Parameters:
+ * 
+ *   tidx - the virtual texture to query
+ * 
+ *   x - the X coordinate
+ * 
+ *   y - the Y coordinate
+ * 
+ *   width - the width of the output image
+ * 
+ *   height - the height of the output image
+ * 
+ *   status - pointer to the status flag
+ * 
+ * Return:
+ * 
+ *   the ARGB value of the given virtual texture at the given coordinate
+ */
+uint32_t vtx_query(
+    int       tidx,
+    int32_t   x,
+    int32_t   y,
+    int32_t   width,
+    int32_t   height,
+    int     * status) {
+  
+  uint32_t result = 0;
+  int errcode = 0;
+  
+  static int32_t s_last_x = 0;
+  static int32_t s_last_y = 0;
+  
+  /* Initialize virtual texture table if needed */
+  vtx_init();
+  
+  /* Check status parameter, dimensions, and coordinates */
+  if (status == NULL) {
+    abort();
+  }
+  if ((width < 1) || (height < 1)) {
+    abort();
+  }
+  if ((x < 0) || (x >= width) ||
+      (y < 0) || (y >= height)) {
+    abort();
+  }
+  
+  /* Enforce proper scanning order and update statistics */
+  if (y > s_last_y) {
+    /* We've advanced a scanline, so update to new position */
+    s_last_x = x;
+    s_last_y = y;
+  
+  } else if (y == s_last_y) {
+    /* Still in same scanline, so next check x */
+    if (x > s_last_x) {
+      /* We've advanced within scanline, so update x */
+      s_last_x = x;
+    
+    } else if (x != s_last_x) {
+      /* We must have gone backwards, which is not allowed */
+      abort();
+    }
+  
+  } else {
+    /* We must have gone backwards in scan order, which is not
+     * allowed */
+    abort();
+  }
+  
+  /* Make sure given texture index is in range of table */
+  if ((tidx >= 1) && (tidx <= m_vtx_count)) {
+    
+    /* Dispatch call to appropriate texture module */
+    if (m_vtx[tidx - 1].vtype == VTEX_PNG) {
+      /* PNG texture, so dispatch to texture module */
+      result = texture_pixel(m_vtx[tidx - 1].v.tidx, x, y);
+      
+    } else if (m_vtx[tidx - 1].vtype == VTEX_PSHADE) {
+      /* Procedural texture, so dispatch to programmable shader
+       * module */
+      result = pshade_pixel(
+                m_vtx[tidx - 1].v.pShader,
+                x, y, width, height,
+                &errcode);
+      
+      /* Check for error */
+      if (errcode != PSHADE_ERR_NONE) {
+        *status = 0;
+        fprintf(stderr, "%s: Programmable shader error...\n",
+                  pModule);
+        fprintf(stderr, "%s: %s!\n",
+          pModule, pshade_errorString(errcode));
+      }
+      
+    } else {
+      /* Shouldn't happen -- unknown virtual texture type or
+       * undefined */
+      abort();
+    }
+    
+  } else {
+    /* Texture index not in range */
+    abort();
+  }
+  
+  /* Return result */
+  return result;
+}
 
 /*
  * Given a Lilac error code, return a string for the error message.
@@ -662,8 +1146,8 @@ static uint32_t colorize(uint32_t rgb_in, uint32_t rgb_tint) {
 /*
  * Core program function.
  * 
- * The texture module and shading table module must be initialized
- * before calling this function.
+ * The virtual texture table and shading table module must be
+ * initialized before calling this function.
  * 
  * The path parameters specify the paths to the relevant files.
  * 
@@ -738,6 +1222,9 @@ static int lilac(
   
   int32_t x = 0;
   int32_t y = 0;
+  
+  time_t last_update = (time_t) 0;
+  time_t current = (time_t) 0;
   
   /* Initialize structures */
   memset(&argb, 0, sizeof(SPH_ARGB));
@@ -832,7 +1319,7 @@ static int lilac(
                 width,
                 height,
                 SPH_IMAGE_DOWN_NONE,
-                OUT_QUALITY,
+                0,
                 &errcode);
     if (pWriter == NULL) {
       *pError = errcode + ERROR_SPH_MIN;
@@ -845,10 +1332,36 @@ static int lilac(
   if (status) {
     pOutScan = sph_image_writer_ptr(pWriter);
   }
- 
+  
+  /* Begin with the update timer and current time set to the current
+   * time (or -1 if error) */
+  if (status) {
+    last_update = time(NULL);
+    current = last_update;
+  }
+  
   /* Go through each scanline */
   if (status) {
     for(y = 0; y < height; y++) {
+
+      /* If there hasn't been a timer error, see if we need a status
+       * update */
+      if ((last_update != (time_t)-1) && (current != (time_t)-1)) {
+        /* Get current time */
+        current = time(NULL);
+        
+        /* Only proceed if we successfully read current time */
+        if (current != (time_t)-1) {
+          /* If current time has changed, then update last_update and
+           * print a status report */
+          if (last_update != current) {
+            last_update = current;
+            fprintf(stderr, "%s: Rendering %ld / %ld (%.1f%%)\n",
+              pModule, (long) (y + 1), (long) height,
+              (((double) (y + 1)) / ((double) height)) * 100.0);
+          }
+        }
+      }
 
       /* Load each scanline from the input files */
       if (status) {
@@ -935,19 +1448,22 @@ static int lilac(
             /* Begin with the second texture faded by the drawing
              * rate */
             pOutScan[x] = fade(
-                            texture_pixel(2, x, y),
+                            vtx_query(2, x, y, width, height, &status),
                             srec.drate);
             
             /* Get the faded pencil texture over the first texture over
              * white */
-            pOutScan[x] = composite(
-                            composite(
-                              pOutScan[x],
-                              texture_pixel(1, x, y)),
-                            UINT32_C(0xffffffff));
+            if (status) {
+              pOutScan[x] = composite(
+                              composite(
+                                pOutScan[x],
+                                vtx_query(
+                                  1, x, y, width, height, &status)),
+                              UINT32_C(0xffffffff));
+            }
             
             /* Colorize the output (unless disabled) */
-            if (srec.rgbtint != UINT32_C(0xffffffff)) {
+            if (status && (srec.rgbtint != UINT32_C(0xffffffff))) {
               pOutScan[x] = colorize(pOutScan[x], srec.rgbtint);
             }
           
@@ -959,20 +1475,29 @@ static int lilac(
             /* Begin with the requested texture faded by the shading
              * rate */
             pOutScan[x] = fade(
-                            texture_pixel(srec.tidx, x, y),
+                            vtx_query(
+                              srec.tidx, x, y, width, height, &status),
                             srec.srate);
             
             /* Composite over the first texture and then pure white */
-            pOutScan[x] = composite(
-                            composite(
-                              pOutScan[x],
-                              texture_pixel(1, x, y)),
-                            UINT32_C(0xffffffff));
+            if (status) {
+              pOutScan[x] = composite(
+                              composite(
+                                pOutScan[x],
+                                vtx_query(
+                                  1, x, y, width, height, &status)),
+                              UINT32_C(0xffffffff));
+            }
             
             /* Colorize the output (unless disabled) */
-            if (srec.rgbtint != UINT32_C(0xffffffff)) {
+            if (status && (srec.rgbtint != UINT32_C(0xffffffff))) {
               pOutScan[x] = colorize(pOutScan[x], srec.rgbtint);
             }
+          }
+          
+          /* Leave loop if error */
+          if (!status) {
+            break;
           }
         }
       }
@@ -1008,11 +1533,12 @@ static int lilac(
 }
 
 /*
- * Program entrypoint.
+ * Program entrypoint
+ * ==================
  */
+
 int main(int argc, char *argv[]) {
 
-  char *pModule = NULL;
   int status = 1;
   int i = 0;
   int errcode = 0;
@@ -1041,9 +1567,9 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  /* In addition to the module name, we must have at least seven
+  /* In addition to the module name, we must have at least eight
    * additional parameters */
-  if (argc < 8) {
+  if (argc < 9) {
     fprintf(stderr, "%s: Not enough parameters!\n", pModule);
     status = 0;
   }
@@ -1051,32 +1577,32 @@ int main(int argc, char *argv[]) {
   /* The number of textures passed may not exceed the maximum number of
    * textures */
   if (status) {
-    if (argc - 6 > TEXTURE_MAXCOUNT) {
+    if (argc - 7 > TEXTURE_MAXCOUNT) {
       fprintf(stderr, "%s: Too many textures!\n", pModule);
       status = 0;
     }
   }
   
-  /* Starting at parameter index six and proceeding through the
-   * remaining parameters, pass each path to the texture module to load
-   * the texture */
+  /* Use parameter index six to initialize the programmable shader
+   * module, unless it has the special value "-" */
   if (status) {
-    for(i = 6; i < argc; i++) {
-      if (!texture_load(argv[i], &errcode)) {
-        
-        fprintf(stderr, "%s: Error loading texture %d...\n",
-                  pModule,
-                  texture_count() + 1);
-        
-        if (errcode == SPH_IMAGE_ERR_IMAGEDIM) {
-          fprintf(stderr, "%s: Texture dimensions too large!\n",
-                    pModule);
-        } else {
-          fprintf(stderr, "%s: %s!\n",
-                    pModule,
-                    sph_image_errorString(errcode));
-        }
-        
+    if (strcmp(argv[6], "-") != 0) {
+      if (!pshade_load(argv[6], &errcode)) {
+        status = 0;
+        fprintf(stderr, "%s: Error loading programmable shader...\n",
+          pModule);
+        fprintf(stderr, "%s: %s!\n",
+          pModule, pshade_errorString(errcode));
+      }
+    }
+  }
+  
+  /* Starting at parameter index seven and proceeding through the
+   * remaining parameters, load each path in the virtual texture
+   * table */
+  if (status) {
+    for(i = 7; i < argc; i++) {
+      if (!vtx_load(argv[i])) {
         status = 0;
         break;
       }
@@ -1085,7 +1611,7 @@ int main(int argc, char *argv[]) {
   
   /* Use parameter index five to initialize the shading table */
   if (status) {
-    if (!ttable_parse(argv[5], &errcode, &errloc)) {
+    if (!ttable_parse(argv[5], &errcode, &errloc, m_vtx_count)) {
       fprintf(stderr, "%s: Error reading table file...\n", pModule);
       if (errloc >= 0) {
         fprintf(stderr, "%s: Error on line %d...\n", pModule, errloc);
@@ -1117,6 +1643,9 @@ int main(int argc, char *argv[]) {
       status = 0;
     }
   }
+  
+  /* Close down Lua interpreter if open */
+  pshade_close();
   
   /* Invert status and return */
   if (status) {

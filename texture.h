@@ -5,6 +5,10 @@
  * texture.h
  * 
  * Texture module of Lilac.
+ * 
+ * This module only handles PNG type textures.  The virtual texture
+ * table, which is the top-level texture structure, is defined in the
+ * lilac_draw.c module.
  */
 
 #include <stddef.h>
