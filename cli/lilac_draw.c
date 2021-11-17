@@ -353,30 +353,77 @@ static int vtx_load(const char *pstr) {
     }
     
   } else if (status && (strcmp(ext, "-") == 0)) {
-    /* No file extension, so this is a shader name token to use with a
-     * programmable shader -- first check that the shader name uses only
-     * ASCII alphanumerics and underscores (empty shader names OK) */
-    for(pc = pstr; *pc != 0; pc++) {
-      if (((*pc < 'A') || (*pc > 'Z')) &&
-            ((*pc < 'a') || (*pc > 'z')) &&
-            ((*pc < '0') || (*pc > '9')) &&
-            (*pc != '_')) {
+    /* No file extension, so this should be a shader name token to use
+     * with a programmable shader -- first, check that the shader name
+     * uses only ASCII alphanumerics and underscores and parentheses,
+     * that it has at least one character, that the first character is
+     * not a digit, and that parentheses are only used in last two
+     * characters */
+    if (status) {
+      if ((*pstr == 0) || ((*pstr >= '0') && (*pstr <= '9'))) {
         status = 0;
         fprintf(stderr, "%s: Shader name '%s' is invalid!\n",
           pModule, pstr);
-        break;
       }
     }
     
-    /* Next make a dynamic copy of the shader name */
+    if (status) {
+      for(pc = pstr; *pc != 0; pc++) {
+        if (((*pc < 'A') || (*pc > 'Z')) &&
+              ((*pc < 'a') || (*pc > 'z')) &&
+              ((*pc < '0') || (*pc > '9')) &&
+              (*pc != '_') && (*pc != '(') && (*pc != ')')) {
+          status = 0;
+          fprintf(stderr, "%s: Shader name '%s' is invalid!\n",
+            pModule, pstr);
+          break;
+        }
+        if ((*pc == '(') || (*pc == ')')) {
+          if ((pc[1] != 0) && (pc[2] != 0)) {
+            status = 0;
+            fprintf(stderr, "%s: Shader name '%s' is invalid!\n",
+              pModule, pstr);
+            break;
+          }
+        }
+      }
+    }
+    
+    /* Second, get the length of the shader name in slen, make sure it
+     * is at least three characters, and make sure that the last two
+     * characters are () */
     if (status) {
       slen = strlen(pstr);
+      if (slen >= 3) {
+        if ((pstr[slen - 2] != '(') || (pstr[slen - 1] != ')')) {
+          status = 0;
+          fprintf(stderr,
+            "%s: Shader name '%s' is missing () at end!\n",
+            pModule, pstr);
+        }
+        
+      } else {
+        status = 0;
+        fprintf(stderr, "%s: Shader name '%s' is missing () at end!\n",
+          pModule, pstr);
+      }
+    }
+    
+    /* Third, drop the last two () characters from the length so the
+     * copy will not include those characters */
+    if (status) {
+      slen -= 2;
+    }
+    
+    /* Next make a dynamic copy of the shader name, without the
+     * trailing () */
+    if (status) {
       pb = (char *) malloc(slen + 1);
       if (pb == NULL) {
         abort();
       }
       memset(pb, 0, slen + 1);
-      strcpy(pb, pstr);
+      memcpy(pb, pstr, slen);
     }
     
     /* Add the procedural texture to the virtual texture table */
