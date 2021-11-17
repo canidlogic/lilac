@@ -252,6 +252,14 @@ uint32_t pshade_pixel(
     abort();
   }
   
+  /* Check that name is not empty and starts with a letter or an
+   * underscore */
+  if ((*pShader != '_') &&
+        ((*pShader < 'A') || (*pShader > 'Z')) &&
+        ((*pShader < 'a') || (*pShader > 'z'))) {
+    abort();
+  }
+  
   /* Check that only ASCII alphanumerics and underscore in name */
   for(pc = pShader; *pc != 0; pc++) {
     if (((*pc < 'A') || (*pc > 'Z')) &&
