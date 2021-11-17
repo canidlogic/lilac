@@ -22,7 +22,13 @@ The `[table]` parameter is the path to a text file specifying shading informatio
 
 The `[pshade]` parameter is the path to a Lua script that will serve as the programmable shader.  Use a hyphen `-` if there is no programmable shader script to load.  See section 4 for how to use the programmable shaders.
 
-The `[texture_1]` ... `[texture_n]` is an array of parameters specifying the textures.  They must either be paths to image files to read as texture files, in which case each path must have a PNG image format extension; or, they must be the name of a function within the Lua script to call for a procedural texture.  There must be at least two textures.  The first texture is always the background (paper) texture, and the second texture is always the pencil texture.
+The `[texture_1]` ... `[texture_n]` is an array of parameters specifying the textures.  They must either be paths to image files to read as texture files, or they must be the names of procedural texture functions in the programmable shader script.  There must be at least two textures.  The first texture is always the background (paper) texture, and the second texture is always the pencil texture.
+
+For textures that are paths to image files, each such image path must end in a case-insensitive match for `.png` and be a PNG image file.
+
+For textures that are procedural function calls, the name of the procedure must be a sequence of one or more ASCII alphanumerics and underscores followed by `()` and match the name of a function defined in the Lua script.
+
+__Important:__ since the procedural texture names include parentheses, you may need to enclose these parameters in quotation marks to prevent the shell from intepreting the characters.
 
 ### 2.1 Table file syntax
 
@@ -105,7 +111,7 @@ The sixth stage is skipped if no tint value was provided in the shading record. 
 
 You can use programmable shaders for procedural textures.  PNG file textures must be fully loaded into memory, so there are memory limits to how large they are.  Procedural textures, on the other hand, generate pixels only as needed, and they can easily cover the whole output area without any memory problems.
 
-To use programmable shaders, each procedural texture should be a function within the Lua script that is passed as a programmable shader to Lilac on the command line.  Then, use the name of the function in the parameter list of textures.  Function names may only contain ASCII alphanumeric characters and underscores.
+To use programmable shaders, each procedural texture should be a function within the Lua script that is passed as a programmable shader to Lilac on the command line.  Then, use the name of the function in the parameter list of textures, with `()` suffixed to the function name, and enclose the whole parameter in quotation marks so the shell won't try to interpret the parentheses.  Function names may only contain ASCII alphanumeric characters and underscores.
 
 A simple procedural texture looks like this in Lua:
 
