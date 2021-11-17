@@ -86,8 +86,8 @@ void pshade_close(void);
  * 
  * pShader is a string that will be passed through to the Lua script to
  * identify the specific procedural texture shader that is requested.
- * It must be a sequence of zero or more ASCII alphanumeric characters
- * and underscores.
+ * It must be a sequence of one or more ASCII alphanumeric characters
+ * and underscores, and the first character may not be a numeric digit.
  * 
  * x and y are the coordinates of the specific pixel that is being
  * requested.  Requests must be sequenced in left-to-right and then
