@@ -96,7 +96,11 @@ Nodes are functions that map each (X, Y) coordinate in the output image to an AR
 
 ## Shastina entities
 
-`STRING` entities cause a literal string value to be pushed onto the interpreter stack.  Any US-ASCII characters in range [0x20, 0x7E] are allowed in the string literal except for backslash and double-quote.  Forward slashes will automatically be converted into backslashes in the loaded strings on Windows platforms.  Strings may be empty of length zero.  Lilac implementations may impose limits on maximum string length.  String literal entities must be double-quoted and not have any string prefix.
+`STRING` entities have a different interpretation depending on whether they are double-quoted or surrounded by curly brackets.  Double-quoted string entities cause a literal string value to be pushed onto the interpreter stack.  Any US-ASCII characters in range [0x20, 0x7E] are allowed in the string literal except for backslash and double-quote.  Forward slashes will automatically be converted into backslashes in the loaded strings on Windows platforms.  Strings may be empty of length zero.  Lilac implementations may impose limits on maximum string length.  
+
+String entities that are surrounded by curly brackets must contain exactly eight base-16 digits, where both lowercase and uppercase letters can be used for digits `A` through `F`.  These string entities cause a color value to be pushed on top of the interpreter stack.  The base-16 digits must be given in AARRGGBB order.
+
+Neither kind of string entity have a Shastina string prefix.
 
 `NUMERIC` entities cause a literal floating-point value to pushed onto the interpreter stack.  The C library's `strtod()` parser is used to parse the numeric string into a floating-point value.  Parsing must be successful and result in a finite value.
 
