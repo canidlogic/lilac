@@ -1348,6 +1348,9 @@ static void handleString(SNENTITY *pEnt) {
   
   char *pc = NULL;
   ISTR str;
+  uint32_t col = 0;
+  int i = 0;
+  int c = 0;
   
   /* Initialize structures */
   istr_init(&str);
@@ -1360,34 +1363,73 @@ static void handleString(SNENTITY *pEnt) {
     raiseErr(__LINE__);
   }
   
-  /* Check string */
+  /* Check that no string prefix */
   if (strlen(pEnt->pKey) > 0) {
-    fprintf(stderr, "%s: String entities may not have prefixes!\n",
+    fprintf(stderr, "%s: String literals may not have prefixes!\n",
             getModule());
     raiseErr(__LINE__);
   }
   
-  if (pEnt->str_type != SNSTRING_QUOTED) {
-    fprintf(stderr, "%s: String entities must be double-quoted!\n",
-            getModule());
-    raiseErr(__LINE__);
-  }
+  /* Different handling depending on string type */
+  if (pEnt->str_type == SNSTRING_QUOTED) {
   
-  for(pc = pEnt->pValue; *pc != 0; pc++) {
-    if ((*pc < 0x20) || (*pc > 0x7e) || (*pc == '"') || (*pc == '\\')) {
-      fprintf(stderr, "%s: Illegal characters in string literal!\n",
-              getModule());
+    /* Double-quoted string literal -- check string literal */
+    for(pc = pEnt->pValue; *pc != 0; pc++) {
+      if ((*pc < 0x20) || (*pc > 0x7e) ||
+          (*pc == '"') || (*pc == '\\')) {
+        fprintf(stderr, "%s: Illegal characters in string literal!\n",
+                getModule());
+        raiseErr(__LINE__);
+      }
+    }
+    
+    /* Load into string, which will also handle backslash substitution
+     * if necessary */
+    istr_new(&str, pEnt->pValue);
+    
+    /* Push onto stack */
+    vm_push_s(&str);
+  
+  } else if (pEnt->str_type == SNSTRING_CURLY) {
+    /* Curly string entity -- check length */
+    if (strlen(pEnt->pValue) != 8) {
+      fprintf(stderr, "%s: Invalid color literal: %s\n",
+              getModule(), pEnt->pValue);
       raiseErr(__LINE__);
     }
+    
+    /* Parse color value */
+    for(i = 0; i < 8; i++) {
+      /* Get current character */
+      c = (pEnt->pValue)[i];
+      
+      /* Convert to digit */
+      if ((c >= '0') && (c <= '9')) {
+        c = c - '0';
+      
+      } else if ((c >= 'A') && (c <= 'F')) {
+        c = c - 'A' + 10;
+        
+      } else if ((c >= 'a') && (c <= 'f')) {
+        c = c - 'a' + 10;
+        
+      } else {
+        fprintf(stderr, "%s: Invalid color literal: %s\n",
+                getModule(), pEnt->pValue);
+        raiseErr(__LINE__);
+      }
+      
+      /* Add in this digit */
+      col = (col << 4) + ((uint32_t) c);
+    }
+    
+    /* Push color value onto stack */
+    vm_push_c(col);
+  
+  } else {
+    raiseErr(__LINE__);
   }
-  
-  /* Load into string, which will also handle backslash substitution if
-   * necessary */
-  istr_new(&str, pEnt->pValue);
-  
-  /* Push onto stack */
-  vm_push_s(&str);
-  
+    
   /* Reset local structures */
   istr_reset(&str);
 }
