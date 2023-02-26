@@ -32,15 +32,16 @@
  * Plug-in dependencies
  * --------------------
  * 
- * This module expects a function plugin_init() that takes no arguments
- * and return no arguments to be defined.  A call will be made to this
- * function after the core section of Lilac has been initialized but
- * before the rendering script is parsed.
+ * This module expects a header named "plugin.h" to be in the include
+ * path, and that this header defines a function plugin_init() that
+ * takes no arguments and returns no arguments.  A call will be made to
+ * this function after the core section of Lilac has been initialized
+ * but before the rendering script is parsed.
  * 
- * This function plugin_init() is the only connection the core section
- * of Lilac has to the other section.  The purpose of the function is to
- * allow plug-in modules to register operations in the core vm module
- * and render preparation functions in the render module.
+ * The purpose of this function call is to allow plug-in modules to
+ * register operations in the core vm module and render preparation
+ * functions in the render module.  See the README in the plugin
+ * directory for further information.
  * 
  * Internal dependencies
  * ---------------------
@@ -70,6 +71,8 @@
 #include "node.h"
 #include "render.h"
 #include "vm.h"
+
+#include "plugin.h"
 
 #include "rfdict.h"
 #include "sophistry.h"
