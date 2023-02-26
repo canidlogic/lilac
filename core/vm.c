@@ -1945,9 +1945,6 @@ NODE *vm_run(SNPARSER *pp, SNSOURCE *pSrc) {
   }
   
   /* Initialize running state */
-  m_ops_dict = rfdict_alloc(1);
-  m_ops = oblock_alloc(MAX_OPERATION_COUNT);
-  
   m_gs = iblock_alloc(MAX_GROUP_DEPTH);
   
   m_st = vblock_alloc(getConfigInt(CFG_STACK_HEIGHT));
