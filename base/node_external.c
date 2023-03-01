@@ -328,6 +328,7 @@ static void prep_external(void) {
         fprintf(stderr, "%s: Failed to read external image %s: %s!\n",
                 getModule(), istr_ptr(&(pl->iPath)),
                 sph_image_errorString(errnum));
+        reportLine();
         raiseErr(__LINE__);
       }
       
@@ -336,6 +337,7 @@ static void prep_external(void) {
           (h != sph_image_reader_height(pr))) {
         fprintf(stderr, "%s: External image %s has wrong dimensions!\n",
                 getModule(), istr_ptr(&(pl->iPath)));
+        reportLine();
         raiseErr(__LINE__);
       }
       
@@ -348,6 +350,7 @@ static void prep_external(void) {
           fprintf(stderr, "%s: Error reading external image %s: %s!\n",
                   getModule(), istr_ptr(&(pl->iPath)),
                   sph_image_errorString(errnum));
+          reportLine();
           raiseErr(__LINE__);
         }
       
@@ -484,6 +487,7 @@ static void op_external(void) {
   if (vm_type() != VM_TYPE_STRING) {
     fprintf(stderr, "%s: external op expects string argument!\n",
             getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -503,6 +507,7 @@ static void op_external(void) {
     fprintf(stderr,
     "%s: external node buffer exceeded! Adjust CFG_EXTERNAL_RAM_KIB.\n",
     getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -520,6 +525,7 @@ static void op_external(void) {
     fprintf(stderr,
     "%s: external node limit exceeded! Adjust CFG_EXTERNAL_DISK_MIB.\n",
     getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
