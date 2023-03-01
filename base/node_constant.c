@@ -104,6 +104,7 @@ static void op_constant(void) {
   if (vm_type() != VM_TYPE_COLOR) {
     fprintf(stderr, "%s: constant op expects color argument!\n",
             getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
