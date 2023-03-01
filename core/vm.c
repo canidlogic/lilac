@@ -1367,6 +1367,7 @@ static void handleString(SNENTITY *pEnt) {
   if (strlen(pEnt->pKey) > 0) {
     fprintf(stderr, "%s: String literals may not have prefixes!\n",
             getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1379,6 +1380,7 @@ static void handleString(SNENTITY *pEnt) {
           (*pc == '"') || (*pc == '\\')) {
         fprintf(stderr, "%s: Illegal characters in string literal!\n",
                 getModule());
+        reportLine();
         raiseErr(__LINE__);
       }
     }
@@ -1395,6 +1397,7 @@ static void handleString(SNENTITY *pEnt) {
     if (strlen(pEnt->pValue) != 8) {
       fprintf(stderr, "%s: Invalid color literal: %s\n",
               getModule(), pEnt->pValue);
+      reportLine();
       raiseErr(__LINE__);
     }
     
@@ -1416,6 +1419,7 @@ static void handleString(SNENTITY *pEnt) {
       } else {
         fprintf(stderr, "%s: Invalid color literal: %s\n",
                 getModule(), pEnt->pValue);
+        reportLine();
         raiseErr(__LINE__);
       }
       
@@ -1460,6 +1464,7 @@ static void handleNumeric(SNENTITY *pEnt) {
   if (errno != 0) {
     fprintf(stderr, "%s: Failed to parse floating-point literal: %s\n",
             getModule(), pEnt->pKey);
+    reportLine();
     raiseErr(__LINE__);
   }
   if (endptr != NULL) {
@@ -1467,12 +1472,14 @@ static void handleNumeric(SNENTITY *pEnt) {
       fprintf(stderr,
               "%s: Failed to parse floating-point literal: %s\n",
               getModule(), pEnt->pKey);
+      reportLine();
       raiseErr(__LINE__);
     }
   }
   if (!isfinite(f)) {
     fprintf(stderr, "%s: Floating-point literal must be finite: %s\n",
             getModule(), pEnt->pKey);
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1513,6 +1520,7 @@ static void handleDeclare(SNENTITY *pEnt) {
     fprintf(stderr,
       "%s: Invalid variable/constant name: %s\n",
       getModule(), pEnt->pKey);
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1521,6 +1529,7 @@ static void handleDeclare(SNENTITY *pEnt) {
     fprintf(stderr,
       "%s: Variable/constant declarations require an initial value!\n",
       getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1530,6 +1539,7 @@ static void handleDeclare(SNENTITY *pEnt) {
     fprintf(stderr,
       "%s: Too many variables/constants!  Increase name-limit.\n",
       getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1559,6 +1569,7 @@ static void handleDeclare(SNENTITY *pEnt) {
   if (!rfdict_insert(m_ns_dict, pEnt->pKey, (long) i)) {
     fprintf(stderr, "%s: Redefinition of variable/constant name: %s\n",
         getModule(), pEnt->pKey);
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1609,6 +1620,7 @@ static void handleAssign(SNENTITY *pEnt) {
     fprintf(stderr,
       "%s: Invalid variable name: %s\n",
       getModule(), pEnt->pKey);
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1617,6 +1629,7 @@ static void handleAssign(SNENTITY *pEnt) {
     fprintf(stderr,
       "%s: Variable assignment requires a stack value!\n",
       getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1626,6 +1639,7 @@ static void handleAssign(SNENTITY *pEnt) {
     fprintf(stderr,
       "%s: Variable %s is not declared!\n",
       getModule(), pEnt->pKey);
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1639,6 +1653,7 @@ static void handleAssign(SNENTITY *pEnt) {
     fprintf(stderr,
       "%s: Can't assign value to constant: %s\n",
       getModule(), pEnt->pKey);
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1686,6 +1701,7 @@ static void handleGet(SNENTITY *pEnt) {
     fprintf(stderr,
       "%s: Invalid variable/constant name: %s\n",
       getModule(), pEnt->pKey);
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1695,6 +1711,7 @@ static void handleGet(SNENTITY *pEnt) {
     fprintf(stderr,
       "%s: Variable/constant %s is not declared!\n",
       getModule(), pEnt->pKey);
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1705,6 +1722,7 @@ static void handleGet(SNENTITY *pEnt) {
   i = vblock_append(m_st);
   if (i < 0) {
     fprintf(stderr, "%s: Interpreter stack overflow!\n", getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1737,6 +1755,7 @@ static void handlBeginGroup(void) {
   if (i < 0) {
     fprintf(stderr, "%s: Too much group nesting! Max: %ld\n",
       getModule(), (long) MAX_GROUP_DEPTH);
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1770,6 +1789,7 @@ static void handleEndGroup(void) {
   if (c - 1 != s) {
     fprintf(stderr, "%s: Group must result in exactly one value!\n",
             getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
 }
@@ -1809,6 +1829,7 @@ static void handleArray(SNENTITY *pEnt) {
   i = vblock_append(m_st);
   if (i < 0) {
     fprintf(stderr, "%s: Interpreter stack overflow!\n", getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1847,6 +1868,7 @@ static void handleOperation(SNENTITY *pEnt) {
   if (!validName(pEnt->pKey)) {
     fprintf(stderr, "%s: Invalid operation name: %s\n",
             getModule(), pEnt->pKey);
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -1855,6 +1877,7 @@ static void handleOperation(SNENTITY *pEnt) {
   if (i < 0) {
     fprintf(stderr, "%s: Unrecognized operation name: %s\n",
             getModule(), pEnt->pKey);
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -2008,6 +2031,7 @@ NODE *vm_run(SNPARSER *pp, SNSOURCE *pSrc) {
         fprintf(stderr,
           "%s: Unsupported Shastina entity type!\n",
           getModule());
+        reportLine();
         raiseErr(__LINE__);
     }
   }
@@ -2240,6 +2264,7 @@ void vm_push_f(double f) {
   i = vblock_append(m_st);
   if (i < 0) {
     fprintf(stderr, "%s: Interpreter stack overflow!\n", getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -2271,6 +2296,7 @@ void vm_push_c(uint32_t col) {
   i = vblock_append(m_st);
   if (i < 0) {
     fprintf(stderr, "%s: Interpreter stack overflow!\n", getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -2307,6 +2333,7 @@ void vm_push_s(ISTR *ps) {
   i = vblock_append(m_st);
   if (i < 0) {
     fprintf(stderr, "%s: Interpreter stack overflow!\n", getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -2343,6 +2370,7 @@ void vm_push_n(NODE *pn) {
   i = vblock_append(m_st);
   if (i < 0) {
     fprintf(stderr, "%s: Interpreter stack overflow!\n", getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
@@ -2377,6 +2405,7 @@ void vm_dup(void) {
   i = vblock_append(m_st);
   if (i < 0) {
     fprintf(stderr, "%s: Interpreter stack overflow!\n", getModule());
+    reportLine();
     raiseErr(__LINE__);
   }
   
