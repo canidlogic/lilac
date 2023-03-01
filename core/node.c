@@ -138,4 +138,7 @@ int32_t node_depth(NODE *pNode) {
   if (pNode == NULL) {
     raiseErr(__LINE__);
   }
+  
+  /* Return requested value */
+  return pNode->depth;
 }
