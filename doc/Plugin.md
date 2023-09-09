@@ -21,7 +21,7 @@ The header of Lilac scripts may include `%require` metacommands, that look like 
     %require com.example.Requirement;
     %require com.example.Requirement "1.25";
 
-Both syntax formats have a unique name for the requirement, which must consist of 1 to 255 ASCII alphanumerics, underscores, and periods, where neither the first nor last character may be period, and no period may occur immediately after another period.  The recommended format to avoid name collisions is to begin with a domain name in reverse order, as shown above.  The prefix `lilac.` is reserved for requirements defined by Lilac itself.
+Both syntax formats have a unique name for the requirement, which must follow the Lilac name identifier format described elsewhere.  The namespace for requirement names is separate from other Lilac namespaces.
 
 The second syntax includes a quoted meta-string that stores a required version number.  The version string must consist of 1 to 63 visible, printing ASCII characters in range 0x21 to 0x7E, excluding backslash and double quote.  The format of the version string is not specified and is specific to the particular requirement.
 

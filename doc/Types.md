@@ -21,17 +21,15 @@ The _reference class_ contains data types that are passed around by reference.  
 
 ## Data type names
 
-Each Lilac data type must have a unique name.  Data type names may only consist of US-ASCII alphanumerics, underscores, and period.  The length of data type names must be in range 1 to 63 characters.  Neither the first nor last character may be a period, and periods may not immediately follow other periods.  Data type names are case sensitive, such that `null` and `Null` are different data types.
+Each Lilac data type must have a unique name.  The names have the format and follow the conventions given in the separate Lilac name identifiers documentation.
 
-The period is designed to be used for hierarchical namespaces.  Extensions can avoid namespace collisions by beginning with a domain name in reverse order, such as:
-
-    com.example.MyDataType
-
-The special null data type has the name `null`.  All other data types defined by core or base plug-ins of Lilac start with the prefix `lilac.` such as:
+The special null data type has the name `null`.  All other data types defined by core or base plug-ins of Lilac are in the package `lilac` such as:
 
     lilac.float
 
-The recommended convention is that the last component of the hierarchical name begin with a lowercase letter if it is a primitive type or an uppercase letter if it is a reference type.  However, Lilac does not enforce these conventions.
+The recommended convention is that the proper name (the last component of the hierarchical name identifier) begins with a lowercase letter if it is a primitive type or an uppercase letter if it is a reference type.  However, Lilac does not enforce this convention.
+
+The namespace of Lilac data type names is separate from other Lilac namespaces.
 
 ## Type codes
 
@@ -47,7 +45,7 @@ The following are the data types defined by the Lilac core, which are necessary 
 
     null
 
-The null data type is in a data type class of its own and has only a single possible value, as discussed earlier.  It is used to indicate that no data is present.  It is the only core type that does not have the `lilac.` namespace prefix.  The core script interpreter uses this type in the address space for ports that are not connected to anything.
+The null data type is in a data type class of its own and has only a single possible value, as discussed earlier.  It is used to indicate that no data is present.  It is the only core type that does not have a name in the `lilac` package.  The core script interpreter uses this type in the address space for ports that are not connected to anything.
 
     lilac.float
 
