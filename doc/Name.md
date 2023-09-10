@@ -25,3 +25,11 @@ Name identifiers with no packages are not recommended.  Lilac only defines the s
 Extensions outside of Lilac are recommended to start with a domain name in reverse order, where the domain is unique to the specific developer.  For example, if the developer controls a domain name `developer.example.com` then the Lilac name identifiers created by that developer should begin with the packages `com.example.developer`.  This ensures that names defined by one developer will not conflict with names defined by a different developer, even if the two developers do not know about each other.
 
 However, Lilac does not enforce these conventions.  They are merely recommendations for avoiding name conflicts.
+
+## Namespaces
+
+Lilac name identifiers are used in different contexts within Lilac, such as for identifying a data type versus identifying a specific compressor to use with a deep bitamp.  A _namespace_ is a set of names specific to a particular context.
+
+Names only need to be unique within the namespace they belong to.  For example, the namespace of data types and the namespace of deep bitmap compressors are separate.  This means that each data type needs a unique name within the set of data types and each deep bitmap compressor needs a unique name within the set of deep bitmap compressors.  However, it is possible for a data type and a deep bitmap compressor to have the exact same name because they are in separate namespaces.
+
+To avoid confusion, however, names should be kept unique across all namespaces as much as possible, though Lilac will not complain if this convention is not upheld.

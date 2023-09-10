@@ -37,6 +37,8 @@ Lilac internally uses unique integer codes to refer to specific data types.  The
 
 The `null` data type always has an integer code of zero.  Primitive types are assigned unique integers greater than zero.  Reference types are assigned unique integers less than zero.
 
+The actual type names are represented by `lilac.atom` types (see later).  The convention is that `null` maps to integer code zero, primitive types are one greater than the integer value of the type name atom, and reference types are one greater and then negated from the integer value of the type name atom.
+
 Except for the mapping of `null` to zero, the mapping of data type names to numeric codes is not fixed and must be determined at runtime.
 
 ## Core types
@@ -78,6 +80,12 @@ The core layer node uses this type as the compressed port type for the core laye
     lilac.addr
 
 Represents a packed, unsigned 32-bit address in the Lilac address space.  The 32 most significant bits are a node number and the 32 least significant bits are a port number.  The core Lilac system uses this type for identifying specific ports within the address space.  This is a primitive type.
+
+    lilac.atom
+
+Represents a unique integer code that is associated with a specific Lilac name identifier, which has a format described in the Lilac name identifiers documentation.  This is a primitive type.
+
+The core layer allows values of this type to be pushed onto the interpreter stack using quoted string entities that have a `T` prefix.  The core layer checks that the format of the quoted string is a valid Lilac name identifier and then checks if it has already been registered as an atom.  If it has, the existing index of the atom is returned.  If it is not, the new atom is registered and the index of the atom is returned.
 
     lilac.String
 

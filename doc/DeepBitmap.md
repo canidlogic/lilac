@@ -48,7 +48,7 @@ Same as the `lilac.DGray` decompressor, except each grayscale value is inverted 
 
 ## Input interface
 
-The input deep bitmap is initialized with a sequence of zero or more layer definitions.  Each layer definition specifies the path to a PNG file corresponding to that layer (as a `lilac.String`), and the name of the compressor to use for the layer (as a `lilac.String`) or a `null` value to indicate no compression is used on the layer.
+The input deep bitmap is initialized with a sequence of zero or more layer definitions.  Each layer definition specifies the path to a PNG file corresponding to that layer (as a `lilac.String`), and the name of the compressor to use for the layer (as a `lilac.atom`) or a `null` value to indicate no compression is used on the layer.
 
 Each of the input PNG files must have the exact same image dimensions.  It is also possible to explicitly provide the image dimensions which each input PNG file must match.  This declaration can be made in the header of the Lilac script.  The image dimension declaration is required if there are no layer declarations, because there is no way to determine the image dimensions automatically if there are no input images.
 
@@ -60,7 +60,7 @@ During rendering, each pixel process begins by using the input deep bitmap funct
 
 ## Output interface
 
-The output deep bitmap is initialized with image dimensions taken from the input deep bitmap and also with a sequence of zero or more layer definitions.  Each layer definition specifies the path to a PNG file that will be written for that layer (as a `lilac.String`), and the name of the decompressor to use for the layer (as a `lilac.String`) or a `null` value to indicate no compression is used on the layer.
+The output deep bitmap is initialized with image dimensions taken from the input deep bitmap and also with a sequence of zero or more layer definitions.  Each layer definition specifies the path to a PNG file that will be written for that layer (as a `lilac.String`), and the name of the decompressor to use for the layer (as a `lilac.atom`) or a `null` value to indicate no compression is used on the layer.
 
 Layer definitions each return a `lilac.int` that indicate the layer index, which is zero or greater.  This layer index can then be used with port listeners that copy values from a specific port into a specific output layer after all the nodes have been computed for each pixel.  Given a layer index, the output deep bitmap can return the offset of the first byte within each deep pixel of this layer, and whether this particular layer is compressed (1 byte) or uncompressed (4 bytes).  The output deep bitmap is also able to return how many total layers have been declared.
 
