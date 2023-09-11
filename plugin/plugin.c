@@ -9,17 +9,23 @@
 
 #include "plugin.h"
 
-/* @@TODO: Import plug-in module headers here */
-#include "node_constant.h"
-#include "node_external.h"
-#include "node_select.h"
+/*
+ * Public function implementations
+ * ===============================
+ * 
+ * See the header for specifications.
+ */
 
 /*
- * The plug-in initialization function implementation.
+ * plugin_init function.
  */
 void plugin_init(void) {
-  /* @@TODO: Insert calls to plug-in module registrations here */
-  node_constant_init();
-  node_external_init();
-  node_select_init();
+  
+}
+
+/*
+ * plugin_supports function.
+ */
+int plugin_supports(const char *pReq, const char *pVer, long lnum) {
+  return 0;
 }
