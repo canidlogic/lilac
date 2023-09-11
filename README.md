@@ -1,9 +1,9 @@
 # Lilac README
 
-Lilac is a set of programs for synthesizing raster images.
+Lilac is a 2D renderer for synthesizing raster images.
 
-The root directory of the project contains this README file, a license file, and the core modules of Lilac.
+The root directory of the project contains this README file and a license.
 
-The `cli` directory of the project contains the actual programs that comprise the command line interface (CLI) of Lilac.  See the README in that directory for further information.
+The `doc` directory contains the bulk of the documentation of Lilac.
 
-The `doc` directory contains the bulk of the documentation of Lilac.  See the README in that directory for further information.
+The `core` directory contains the core Lilac implementation.  The `plugin` directory is used to register plug-ins with this core framework.  The `base` directory contains a basic set of plug-ins to use with Lilac.
