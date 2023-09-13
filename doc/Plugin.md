@@ -16,15 +16,14 @@ The core Lilac program is only designed to provide a framework which can then be
 
 ## Requirement support
 
-The header of Lilac scripts may include `%require` metacommands, that look like one of the following:
+The header of Lilac scripts may include `%require` metacommands, that look like this:
 
     %require com.example.Requirement;
-    %require com.example.Requirement "1.25";
 
-Both syntax formats have a unique name for the requirement, which must follow the Lilac name identifier format described elsewhere.  The namespace for requirement names is separate from other Lilac namespaces.
+The unique name for the requirement must match the Lilac name identifier format.  If you need specific versions, the versions can be included as a suffix, such as this:
 
-The second syntax includes a quoted meta-string that stores a required version number.  The version string must consist of 1 to 63 visible, printing ASCII characters in range 0x21 to 0x7E, excluding backslash and double quote.  The format of the version string is not specified and is specific to the particular requirement.
+    %require com.example.Requirement.2.15;
 
-When a requirement metacommand is encountered in the script header, the `plugin_supports()` function is called with the requirement string and the optional requirement version.  This function either returns that the requirement is fulfilled or that the requirement is not fulfilled.  An unfulfilled requirement results in the script stopping on an error.
+When a requirement metacommand is encountered in the script header, the `plugin_supports()` function is called with an atom representing the requirement name.  This function either returns that the requirement is fulfilled or that the requirement is not fulfilled.  An unfulfilled requirement results in the script stopping on an error.
 
-The implementation of this function in `plugin.c` should scan for the requirements that are fulfilled by the modules which are registered.  This allows Lilac scripts to ensure that the specific Lilac build being used has all the necessary plug-ins necessary to interpret the script.
+Since Lilac is extensible, scripts may want to make sure that the specific plug-ins they use are supported by the Lilac build.  The requirement system is intended to provide this functionality.
