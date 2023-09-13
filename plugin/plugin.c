@@ -26,6 +26,7 @@ void plugin_init(void) {
 /*
  * plugin_supports function.
  */
-int plugin_supports(const char *pReq, const char *pVer, long lnum) {
+int plugin_supports(int32_t ra) {
+  (void) ra;
   return 0;
 }

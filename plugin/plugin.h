@@ -6,9 +6,17 @@
  * ========
  * 
  * Plug-in registry for Lilac.
+ * 
+ * Requirements
+ * ------------
+ * 
+ * Requires the following Lilac modules:
+ * 
+ *   - atom.c
  */
 
 #include <stddef.h>
+#include <stdint.h>
 
 /*
  * The plug-in initialization function.
@@ -21,26 +29,19 @@ void plugin_init(void);
 /*
  * The requirement support function.
  * 
- * This checks whether a given requirement is supported by the plug-in
- * modules that are registered with plugin_init().  pReq is the
- * requirement string, which must be present.  pVer is the version
- * string for the requirement, which is optional and may be NULL.
+ * This checks whether a given requirement is supported by this build of
+ * Lilac.
  * 
- * lnum is the line number from the Shastina script, where the
- * declaration was made.  This is used for diagnostic messages.
+ * ra is the atom of the requirement that is being checked for.
  * 
  * Parameters:
  * 
- *   pReq - the requirement string
- * 
- *   pVer - the version string, or NULL
- * 
- *   lnum - the script line for the requirement declaration
+ *   ra - the requirement atom
  * 
  * Return:
  * 
  *   non-zero if requirement is supported, zero if not
  */
-int plugin_supports(const char *pReq, const char *pVer, long lnum);
+int plugin_supports(int32_t ra);
 
 #endif
