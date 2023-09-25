@@ -126,14 +126,6 @@ static void sayWarn(int lnum, const char *pDetail) {
 #define COORD_EPSILON (0.00001)
 
 /*
- * w values in circle rendering must be at least this far within the
- * boundaries of range [-1.0, 1.0] in order for intersection tests to
- * be done.  Else, intersection is assumed to be too close to horizontal
- * and is ignored.
- */
-#define CIRCLE_EPSILON (0.00001)
-
-/*
  * Type declarations
  * =================
  */
@@ -1531,18 +1523,18 @@ void lilac_line(double x1, double y1, double x2, double y2) {
 /*
  * lilac_dot function.
  */
-void lilac_dot(double x, double y, double r) {
+void lilac_dot(int32_t x, int32_t y, int32_t r) {
   
-  double min_x = 0.0;
-  double max_x = 0.0;
-  double min_y = 0.0;
-  double max_y = 0.0;
+  int64_t min_x = 0;
+  int64_t max_x = 0;
+  int64_t min_y = 0;
+  int64_t max_y = 0;
   
-  double scan_min = 0.0;
-  double scan_max = 0.0;
+  int32_t scan_min = 0;
+  int32_t scan_max = 0;
   
-  double r_min = 0.0;
-  double r_max = 0.0;
+  int32_t r_min = 0;
+  int32_t r_max = 0;
   
   int h = 0;
   int32_t i = 0;
@@ -1551,14 +1543,15 @@ void lilac_dot(double x, double y, double r) {
   int32_t score = 0;
   int32_t xi = 0;
   
+  double yo = 0.0;
   double ys = 0.0;
+  double rf = 0.0;
   double w = 0.0;
-  double a = 0.0;
-  double b = 0.0;
+  int32_t v = 0;
   
-  double x_up = 0.0;
-  double x_down = 0.0;
-  double x_intr = 0.0;
+  int64_t x_up = 0;
+  int64_t x_down = 0;
+  int64_t x_intr = 0;
   
   IREC ir;
   
@@ -1570,123 +1563,111 @@ void lilac_dot(double x, double y, double r) {
     raiseErr(__LINE__, "Wrong state");
   }
   
-  /* Check for finite values */
-  if ((!isfinite(x)) || (!isfinite(y)) || (!isfinite(r))) {
-    raiseErr(__LINE__, "Non-finite parameters");
-  }
-  
-  /* Check that radius is greater than zero */
-  if (!(r > 0.0)) {
+  /* Check parameters */
+  if (r < 1) {
     raiseErr(__LINE__, "Radius must be greater than zero");
   }
   
-  /* If radius is less than coordinate epsilon, then do nothing */
-  if (!(r >= COORD_EPSILON)) {
-    return;
-  }
-  
   /* Determine the minimum and maximum X and Y coordinates of the dot */
-  min_x = x - r;
-  max_x = x + r;
+  min_x = ((int64_t) x) - ((int64_t) r);
+  max_x = ((int64_t) x) + ((int64_t) r);
   
-  min_y = y - r;
-  max_y = y + r;
-  
-  if ((!isfinite(min_x)) || (!isfinite(max_x)) ||
-      (!isfinite(min_y)) || (!isfinite(max_y))) {
-    raiseErr(__LINE__, "Numeric problem with circle bounding");
-  }
+  min_y = ((int64_t) y) - ((int64_t) r);
+  max_y = ((int64_t) y) + ((int64_t) r);
   
   /* Determine the minimum and maximum scanline Y values in the current
    * tile */
-  scan_min = ((double) m_ty) + 0.5;
-  scan_max = ((double) (m_ty + m_th - 1)) + 0.5;
+  scan_min = m_ty;
+  scan_max = m_ty + m_th - 1;
   
   /* If maximum Y of circle is less than the minimum scanline, skip this
    * dot; if minimum Y of circle is greater than maximum scanline, skip
    * this dot */
-  if ((!(max_y >= scan_min)) || (!(min_y <= scan_max))) {
+  if ((max_y < scan_min) || (min_y > scan_max)) {
     return;
   }
   
   /* If minimum X of circle is greater or equal to X coordinate that
    * follows this tile, skip this dot */
-  if (!(min_x < ((double) (m_tx + m_tw)))) {
+  if (min_x >= m_tx + m_tw) {
     return;
   }
   
   /* Set r_min to the maximum of the circle minimum Y and the minimum Y
    * scanline; set r_max to the minimum of the circle maximum Y and the
    * maximum Y scanline */
-  r_min = min_y;
-  if (!(scan_min <= r_min)) {
-    r_min = scan_min;
+  r_min = scan_min;
+  if (min_y > r_min) {
+    r_min = (int32_t) min_y;
   }
   
-  r_max = max_y;
-  if (!(scan_max >= r_max)) {
-    r_max = scan_max;
+  r_max = scan_max;
+  if (max_y < r_max) {
+    r_max = (int32_t) max_y;
   }
   
   /* Determine range of tile scanlines that the circle crosses */
-  i = (int32_t) ceil(r_min - scan_min);
-  j = (int32_t) floor(r_max - scan_min);
+  i = r_min - scan_min;
+  j = r_max - scan_min;
   
-  /* If empty range (circle between scanlines), then skip the dot */
-  if (j < i) {
-    return;
-  }
-  
-  /* Bound i and j */
-  if (i < 0) {
-    i = 0;
-  } else if (i >= m_th) {
-    i = m_th - 1;
-  }
-  
-  if (j < 0) {
-    j = 0;
-  } else if (j >= m_th) {
-    j = m_th - 1;
-  }
+  /* Determine the Y origin and radius of the circle in float space */
+  yo = ((double) y) + 0.5;
+  rf = ((double) r) + 0.5;
   
   /* Iterate through the relevant scanlines */
   for(k = i; k <= j; k++) {
     
-    /* Get the Y coordinate of this scanline */
+    /* Get the Y coordinate of this scanline in float space */
     ys = ((double) (k + m_ty)) + 0.5;
+
+    /* Compute the arcsine */
+    w = ys - yo;
+    w = w / rf;
     
-    /* Compute the w value of the circle at this scanline */
-    w = (ys - y) / r;
     if (!isfinite(w)) {
-      raiseErr(__LINE__, "Numeric problem with circle");
+      raiseErr(__LINE__, "Numeric problem in circle computation");
+    }
+    if (!(w <= 1.0)) {
+      w = 1.0;
+    } else if (!(w >= -1.0)) {
+      w = -1.0;
     }
     
-    /* Skip this scanline if w not within range */
-    if (!((w >= -1.0 + CIRCLE_EPSILON) &&
-          (w <=  1.0 - CIRCLE_EPSILON))) {
-      continue;
+    w = asin(w);
+    if (!isfinite(w)) {      
+      raiseErr(__LINE__, "Numeric problem in circle computation");
+    }
+
+    /* Take cosine of the arcsine and multiply by floating r to get the
+     * w value */
+    w = cos(w);
+    w = rf * w;
+
+    if (!isfinite(w)) {
+      raiseErr(__LINE__, "Numeric problem in circle computation");
+    }
+    if (!(w >= 0.0)) {
+      w = 0.0;
+    } else if (!(w <= rf)) {
+      w = (double) rf;
     }
     
-    /* Compute base intersection angle and the cosine distance */
-    a = asin(w);
-    if (!isfinite(a)) {
-      raiseErr(__LINE__, "Numeric problem with circle angle");
-    }
-    
-    b = r * cos(a);
-    if (!isfinite(b)) {
-      raiseErr(__LINE__, "Numeric problem with circle angle");
+    /* Floor w to get the integer value and bound to radius */
+    v = (int32_t) floor(w);
+    if (v < 0) {
+      v = 0;
+    } else if (v > r) {
+      v = r;
     }
     
     /* Compute the X coordinates on this scanline where the circle is
      * crossing up and crossing down */
-    x_down = x + b;
-    x_up   = x - b;
+    x_down = ((int64_t) x) + ((int64_t) v);
+    x_up   = ((int64_t) x) - ((int64_t) v);
     
-    if ((!isfinite(x_down)) && (!isfinite(x_up))) {
-      raiseErr(__LINE__, "Numeric problem finding circle intersection");
-    }
+    /* Increment the x_down crossing, so that the pixel at x_down will
+     * still be included in the rendering */
+    x_down++;
     
     /* Record both these intersections */
     for(h = 0; h < 2; h++) {
@@ -1704,24 +1685,17 @@ void lilac_dot(double x, double y, double r) {
       }
       
       /* If current X is beyond this tile, skip it */
-      if (!(x_intr < ((double) (m_tx + m_tw)))) {
+      if (x_intr >= m_tx + m_tw) {
         continue;
       }
       
       /* If current X is before this tile, boost it to start of tile */
-      if (!(x_intr >= (double) m_tx)) {
-        x_intr = (double) m_tx;
+      if (x_intr < m_tx) {
+        x_intr = m_tx;
       }
       
-      /* Convert to integer and bound */
-      xi = (int32_t) floor(x_intr);
-      if (xi < m_tx) {
-        xi = m_tx;
-      } else if (xi >= m_tx + m_tw)  {
-        xi = m_tx + m_tw - 1;
-      }
-      
-      /* Convert to tile X offset */
+      /* Convert to 32-bit integer and then to tile X offset */
+      xi = (int32_t) x_intr;
       xi = xi - m_tx;
       
       /* Record intersection based on offset */

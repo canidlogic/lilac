@@ -452,11 +452,12 @@ void lilac_line(double x1, double y1, double x2, double y2);
  * The center of the circle is given by the X and Y coordinates.  These
  * coordinates are pixel coordinates in the coordinate space of the
  * output image.  They do NOT have to be within the boundaries of the
- * output image.  However, they must be finite.
+ * output image.
  * 
- * The radius of the circle is given by r, which must be a finite value
- * greater than zero.  The radius is measured in output pixel lengths.
- * This function will ignore dots with radii too close to zero.
+ * The radius of the circle is given by r, which must be greater than
+ * zero.  The radius is measured in output pixel lengths.  Note that
+ * since anti-aliasing is not used, the shape will not look circular
+ * when r is very small.
  * 
  * The circular path moves in clockwise direction around the perimeter
  * of the dot.  This is significant for determining which pixels get
@@ -470,7 +471,7 @@ void lilac_line(double x1, double y1, double x2, double y2);
  * 
  *   r - the radius of the dot
  */
-void lilac_dot(double x, double y, double r);
+void lilac_dot(int32_t x, int32_t y, int32_t r);
 
 /*
  * Lock the current tile so that its pixels may be directly accessed.

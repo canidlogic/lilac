@@ -1,14 +1,14 @@
 /*
- * test_dot.c
- * ==========
+ * test_dots.c
+ * ===========
  * 
  * Simple test of Lilac renderer that just writes a 600x400 file with a
- * big, blue dot.
+ * sequence of dots with small radii.
  * 
  * Syntax
  * ------
  * 
- *   test_dot [out_path]
+ *   test_dots [out_path]
  * 
  * Arguments
  * ---------
@@ -43,7 +43,23 @@ int main(int argc, char *argv[]) {
     lilac_begin_tile();
     lilac_begin_path();
     
-    lilac_dot(300, 200, 150);
+    lilac_dot(300, 190, 1);
+    
+    lilac_dot(300, 200, 2);
+    lilac_dot(300, 220, 3);
+    lilac_dot(300, 240, 4);
+    lilac_dot(300, 260, 5);
+    lilac_dot(300, 280, 6);
+    lilac_dot(300, 300, 7);
+    lilac_dot(300, 320, 8);
+    lilac_dot(300, 340, 9);
+    lilac_dot(300, 365, 10);
+    
+    lilac_dot(350, 200, 11);
+    lilac_dot(350, 240, 12);
+    lilac_dot(350, 280, 13);
+    lilac_dot(350, 320, 14);
+    lilac_dot(350, 365, 15);
     
     lilac_end_path();
     lilac_end_tile();
