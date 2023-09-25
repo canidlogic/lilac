@@ -43,9 +43,9 @@ int main(int argc, char *argv[]) {
     lilac_begin_tile();
     lilac_begin_path();
     
-    lilac_line(50.0, 50.0, 550.0, 50.0);
-    lilac_line(550.0, 50.0, 550.0, 350.0);
-    lilac_line(550.0, 350.0, 50.0, 50.0);
+    lilac_line(50, 50, 550, 50);
+    lilac_line(550, 50, 550, 350);
+    lilac_line(550, 350, 50, 50);
     
     lilac_end_path();
     lilac_end_tile();

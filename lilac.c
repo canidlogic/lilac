@@ -120,12 +120,6 @@ static void sayWarn(int lnum, const char *pDetail) {
 #define ALPHA_EPSILON (0.0001f)
 
 /*
- * When coordinates are less than this distance from each other, they
- * are assumed to be equal.
- */
-#define COORD_EPSILON (0.00001)
-
-/*
  * Type declarations
  * =================
  */
@@ -1297,21 +1291,21 @@ void lilac_end_path(void) {
 /*
  * lilac_line function.
  */
-void lilac_line(double x1, double y1, double x2, double y2) {
+void lilac_line(int32_t x1, int32_t y1, int32_t x2, int32_t y2) {
   
-  double min_x = 0.0;
-  double max_x = 0.0;
-  double min_y = 0.0;
-  double max_y = 0.0;
+  int32_t min_x = 0;
+  int32_t max_x = 0;
+  int32_t min_y = 0;
+  int32_t max_y = 0;
   
-  double scan_min = 0.0;
-  double scan_max = 0.0;
+  int32_t scan_min = 0;
+  int32_t scan_max = 0;
   
-  double scan_begin = 0.0;
-  double scan_end = 0.0;
+  int32_t scan_begin = 0;
+  int32_t scan_end = 0;
   
-  double r_min = 0.0;
-  double r_max = 0.0;
+  int32_t r_min = 0;
+  int32_t r_max = 0;
   
   int32_t i = 0;
   int32_t j = 0;
@@ -1319,9 +1313,8 @@ void lilac_line(double x1, double y1, double x2, double y2) {
   int32_t y = 0;
   int32_t score = 0;
   
-  double y_s = 0.0;
-  double t = 0.0;
-  double ix = 0.0;
+  int32_t y_s = 0;
+  int64_t ix = 0;
   
   IREC ir;
   
@@ -1333,15 +1326,9 @@ void lilac_line(double x1, double y1, double x2, double y2) {
     raiseErr(__LINE__, "Wrong state");
   }
   
-  /* Check for finite coordinates */
-  if ((!isfinite(x1)) || (!isfinite(y1)) ||
-      (!isfinite(x2)) || (!isfinite(y2))) {
-    raiseErr(__LINE__, "Non-finite coordinates");
-  }
-  
-  /* If Y endpoints are within epsilon distance of each other, then we
-   * have a horizontal line, so skip it and do nothing further */
-  if (fabs(y2 - y1) < COORD_EPSILON) {
+  /* If Y coordinates are equal, then we have a perfectly horizontal
+   * line, so skip it */
+  if (y1 == y2) {
     return;
   }
   
@@ -1368,12 +1355,12 @@ void lilac_line(double x1, double y1, double x2, double y2) {
   
   /* Determine the starting and ending X coordinates of each scanline in
    * this tile; the ending X coordinate is excluded */
-  scan_begin = (double) m_tx;
-  scan_end   = ((double) (m_tx + m_tw));
+  scan_begin = m_tx;
+  scan_end   = m_tx + m_tw;
   
   /* Determine the minimum and maximum Y scanlines of this tile */
-  scan_min = ((double) m_ty) + 0.5;
-  scan_max = ((double) (m_ty + m_th - 1)) + 0.5;
+  scan_min = m_ty;
+  scan_max = m_ty + m_th - 1;
   
   /* If minimum X of line is greater than or equal to the excluded X
    * endpoint of the line, then skip line */
@@ -1402,30 +1389,10 @@ void lilac_line(double x1, double y1, double x2, double y2) {
     r_max = scan_max;
   }
   
-  /* Use r_min and r_max to determine the index i of the first tile
-   * scanline greater or equal to r_min and the index j of the last tile
-   * scanline less or equal to r_max */
-  i = (int32_t) ceil(r_min - scan_min);
-  j = (int32_t) floor(r_max - scan_min);
-  
-  /* If j is less than i, then the line is entirely between two
-   * scanlines, so skip it */
-  if (j < i) {
-    return;
-  }
-  
-  /* Clamp i and j to the tile boundaries */
-  if (i < 0) {
-    i = 0;
-  } else if (i >= m_th) {
-    i = m_th - 1;
-  }
-  
-  if (j < 0) {
-    j = 0;
-  } else if (j >= m_th) {
-    j = m_th - 1;
-  }
+  /* Use r_min and r_max to determine the Y scanline range within the
+   * tile from i to j */
+  i = r_min - scan_min;
+  j = r_max - scan_min;
   
   /* Determine the score for fill count adjustment based on direction of
    * the line */
@@ -1445,25 +1412,12 @@ void lilac_line(double x1, double y1, double x2, double y2) {
   for(y = i; y <= j; y++) {
     
     /* Determine the Y coordinate of this tile scanline */
-    y_s = ((double) (y + m_ty)) + 0.5;
-    
-    /* Determine t coordinate of intersection, and clamp to range 0.0 to
-     * 1.0 */
-    t = (y_s - y1) / (y2 - y1);
-    if (!isfinite(t)) {
-      raiseErr(__LINE__, "Numeric problem on line intersection");
-    }
-    if (!(t >= 0.0)) {
-      t = 0.0;
-    } else if (!(t <= 1.0)) {
-      t = 1.0;
-    }
+    y_s = y + m_ty;
     
     /* Compute X coordinate of scanline intersection */
-    ix = ((1.0 - t) * x1) + (t * x2);
-    if (!isfinite(ix)) {
-      raiseErr(__LINE__, "Numeric problem on line intersection");
-    }
+    ix = ((((int64_t) y2) - ((int64_t) y_s)) * ((int64_t) x1))
+        + ((((int64_t) y_s) - ((int64_t) y1)) * ((int64_t) x2));
+    ix = ix / (((int64_t) y2) - ((int64_t) y1));
     
     /* If intersection X coordinate is greater than or equal to the
      * excluded X endpoint of the scanline, then skip this scanline and
@@ -1474,17 +1428,12 @@ void lilac_line(double x1, double y1, double x2, double y2) {
     
     /* If intersection X coordinate is less than the X starting point of
      * the scanline, set it to the X starting point of the scanline */
-    if (!(ix >= scan_begin)) {
+    if (ix < scan_begin) {
       ix = scan_begin;
     }
     
-    /* Determine the X coordinate in the tile and clamp to tile */
-    x = (int32_t) floor(ix - scan_begin);
-    if (x < 0) {
-      x = 0;
-    } else if (x >= m_tw) {
-      x = m_tw - 1;
-    }
+    /* Determine the X coordinate in the tile */
+    x = (int32_t) (ix - ((int64_t) scan_begin));
     
     /* Adjust either the starting count or the intersection array, based
      * on X coordinate */

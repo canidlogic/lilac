@@ -425,11 +425,16 @@ void lilac_end_path(void);
  * 
  * The coordinates are pixel coordinates in the coordinate space of the
  * output image.  They do NOT have to be within the boundaries of the
- * output image.  However, they must all be finite.
+ * output image.
  * 
  * The order of the endpoints does matter, because line direction is
  * significant for determining which pixels get filled.  See the
  * lilac_begin_path() function for further information.
+ * 
+ * Note that if you draw a rectangle with lines, the rightmost column of
+ * pixels will be missing.  This is because the fill count will return
+ * to zero at the start of rendering that column, causing the last
+ * column to not be rendered.
  * 
  * Parameters:
  * 
@@ -441,7 +446,7 @@ void lilac_end_path(void);
  * 
  *   y2 - the Y coordinate of the line end
  */
-void lilac_line(double x1, double y1, double x2, double y2);
+void lilac_line(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
 
 /*
  * Add a circular dot to the current path.
@@ -455,9 +460,7 @@ void lilac_line(double x1, double y1, double x2, double y2);
  * output image.
  * 
  * The radius of the circle is given by r, which must be greater than
- * zero.  The radius is measured in output pixel lengths.  Note that
- * since anti-aliasing is not used, the shape will not look circular
- * when r is very small.
+ * zero.  The radius is measured in output pixel lengths.
  * 
  * The circular path moves in clockwise direction around the perimeter
  * of the dot.  This is significant for determining which pixels get
